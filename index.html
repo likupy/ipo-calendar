@@ -120,7 +120,8 @@ h2 { margin: 0; font-size: 17px; font-weight: 700; min-width: 7.2em; text-align:
   box-shadow: inset 1px 0 0 var(--surface), inset -1px 0 0 var(--surface);
   word-break: keep-all; overflow-wrap: anywhere;
 }
-.chip.est { outline: 1px dashed currentColor; outline-offset: -3px; }
+.chip.wd { opacity: .5; }
+.chip.wd .nm { text-decoration: line-through; }
 .chip.sub2 { background: color-mix(in srgb, var(--c-bg) 50%, var(--surface)); }
 .nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--nl, 1); overflow: hidden; font-size: var(--nm); line-height: var(--lh); font-weight: 600; }
 .sub2 .nm { font-weight: 500; }
@@ -405,7 +406,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     }
     const nl = Math.max(1, 3 - lines.length);
     const inner = '<span class="nm" style="--nl:' + nl + '"><span class="tag">' + tag + '</span>' + esc(p.name) + '</span>' + lines.join('');
-    const cls = 'chip k-' + k + (ev.kind === 'listing' && p.listingEst ? ' est' : '') + (ev.kind === 'sub2' ? ' sub2' : '') + (it.span === 2 ? ' span' : '') + (it.past ? ' past' : '') + (dimmed ? ' dim' : '');
+    const cls = 'chip k-' + k + (p.withdrawn ? ' wd' : '') + (ev.kind === 'listing' && p.listingEst ? ' est' : '') + (ev.kind === 'sub2' ? ' sub2' : '') + (it.span === 2 ? ' span' : '') + (it.past ? ' past' : '') + (dimmed ? ' dim' : '');
     const style = 'grid-column:' + (it.col + 1) + (it.span === 2 ? ' / span 2' : '') + ';grid-row:' + (it.row + 2);
     const aria = p.name + ' ' + label + (br ? ', ' + br : '') + (ev.kind !== 'refund' && priceText(p) ? ', ' + priceText(p) : '');
     return '<button type="button" class="' + cls + '" style="' + style + '" data-ipo="' + esc(p.id) + '" aria-label="' + esc(aria) + '">' + inner + '</button>';
@@ -557,7 +558,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const p = byId[id];
     if (!p) return;
     lastFocus = trigger || null;
-    $('sheetTitle').innerHTML = esc(p.name) + (p.spac ? '<span class="badge">스팩</span>' : '');
+    $('sheetTitle').innerHTML = esc(p.name) + (p.spac ? '<span class="badge">스팩</span>' : '') + (p.withdrawn ? '<span class="badge">철회신고 공시</span>' : '');
     let h = '';
     h += row('주관사', p.brokers.length ? esc(p.brokers.join(' · ')) : '정보 없음');
     if (p.price != null) {

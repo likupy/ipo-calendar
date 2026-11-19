@@ -247,15 +247,15 @@ def build_one(corp, flags_out):
         for m in re.finditer("희망", txt):
             if len(doc_hits) < 4:
                 doc_hits.append(txt[max(0, m.start() - 60): m.start() + 140])
-    if len(DEBUG) < 4 or any(k in corp["corp_name"] for k in ("하나에어로", "에스에프씨", "제이앤티지")):
-        if len(DEBUG) < 8:
+    if os.environ.get("DEBUG_DUMP") and len(DEBUG) < 8:
+        if True:
             DEBUG.append({"name": corp["corp_name"], "confirmed": corp.get("_confirmed"), "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt", "corp_cls", "stock_code") if k in corp},
                           "estkRs": {k: (v[:6] if isinstance(v, list) else v) for k, v in r.items()},
                           "doc_hits": doc_hits})
 
     brokers = []
     for u in under:
-        if re.search(r"주관|주선", u.get("actsen", "")):
+        if re.search(r"대표|공동|주관|주선|인수", u.get("actsen", "")):
             b = short_broker(u.get("actnmn"))
             if b and b not in brokers:
                 brokers.append(b)
@@ -280,6 +280,8 @@ def build_one(corp, flags_out):
         "rcept_no": corp["rcept_no"],
         "flags": flags,
     }
+    if "철회" in corp.get("report_nm", ""):
+        item["withdrawn"] = True
     if "스팩" in item["name"]:
         item["spac"] = True
         if price is None and band is None:
@@ -371,11 +373,13 @@ def main():
     if not ipos and failed:
         sys.exit("수집 결과가 비어 있어 기존 파일을 덮어쓰지 않습니다.")
 
-    if old and DEBUG == [] and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
+    if old and "debug" not in old_doc and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos, "debug": DEBUG or old_doc.get("debug", [])}
+    doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos}
+    if DEBUG:
+        doc["debug"] = DEBUG
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
