@@ -295,7 +295,7 @@ def build_one(corp, flags_out):
         "rcept_no": corp["rcept_no"],
         "flags": flags,
     }
-    if "스팩" in item["name"]:
+    if "스팩" in item["name"] or "기업인수목적" in item["name"]:
         item["spac"] = True
         if price is None and band is None:
             price = 2000   # 스팩 공모가는 항상 2,000원
@@ -329,7 +329,10 @@ def candidates():
     by = {}
     for x in out:
         if x.get("stock_code", "").strip():
-            continue  # 이미 상장된 회사의 유상증자 등
+            # 이미 상장된 회사: 유상증자 등은 제외. 단, 38커뮤니케이션 공모청약 일정에 있으면 방금 상장한 공모주로 본다.
+            k = name_key(x["corp_name"])
+            if not re.search(r"(?<![가-힣A-Za-z0-9])" + k + r"[가-힣]{0,8}\s*20\d\d\.\d\d\.\d\d~", T38.get("sched", "")):
+                continue
         c = by.setdefault(x["corp_code"], dict(x, _confirmed=False))
         if x["rcept_no"] >= c["rcept_no"]:
             c.update({k: x[k] for k in ("rcept_no", "report_nm", "rcept_dt")})
