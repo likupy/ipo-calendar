@@ -445,6 +445,19 @@ def main():
     cutoff = (datetime.now(KST) - timedelta(days=KEEP_DAYS)).date().isoformat()
     merged = dict(old)
     merged.update(new)
+    # 이번에 새로 못 읽은(이미 상장해 일정표에서 내려간) 종목은 상장일만 다시 확인하고, 이전 값의 오류를 바로잡는다
+    for k, p in merged.items():
+        if k in new:
+            continue
+        i = info_38(T38, p["name"], (p.get("sub") or [None])[0])
+        if i["listing"]:
+            p["listing"] = iso(i["listing"])
+            p["listingEst"] = False
+        if i["price"] is not None and p.get("price") is None:
+            p["price"] = i["price"]
+        if p.get("band") and p["band"][0] == p["band"][1]:
+            p.pop("band")
+            p.pop("tone", None)
     ipos = [p for p in merged.values() if (p.get("sub") or [p.get("listing") or "0"])[0] >= cutoff]
     ipos.sort(key=lambda p: (p.get("sub") or ["9999"])[0])
 
