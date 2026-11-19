@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>공모주 캘린더</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: Mon–Fri month grid (the way the blogger's sheet reads), colored chips per event type,
+   broker filter above, details in a bottom sheet. Phone and desktop share the same grid; only type size changes. */
+:root {
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --out: #FAFBFC;
+  --ink: #141A22;
+  --ink-2: #596372;
+  --line: #DFE4EB;
+  --today: #EDF1F7;
+  --sub-bg: #D9F0E2; --sub-fg: #0A3320;
+  --ref-bg: #E6E9EE; --ref-fg: #29313D;
+  --lst-bg: #FADFD7; --lst-fg: #5A1A0B;
+  --spc-bg: #D3ECF3; --spc-fg: #083745;
+  --up: #B01E13;
+  --down: #1743B5;
+  --font: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1318; --surface: #161B22; --out: #12171D; --ink: #E7EAEE; --ink-2: #98A2B0; --line: #262D37; --today: #1E2630;
+    --sub-bg: #153221; --sub-fg: #A9E4C0;
+    --ref-bg: #252B34; --ref-fg: #B7BFCB;
+    --lst-bg: #3B1E17; --lst-fg: #F7BCAC;
+    --spc-bg: #10303A; --spc-fg: #9CD8E8;
+    --up: #FF8A7D; --down: #86B1FF;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1318; --surface: #161B22; --out: #12171D; --ink: #E7EAEE; --ink-2: #98A2B0; --line: #262D37; --today: #1E2630;
+  --sub-bg: #153221; --sub-fg: #A9E4C0;
+  --ref-bg: #252B34; --ref-fg: #B7BFCB;
+  --lst-bg: #3B1E17; --lst-fg: #F7BCAC;
+  --spc-bg: #10303A; --spc-fg: #9CD8E8;
+  --up: #FF8A7D; --down: #86B1FF;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 36px;
+}
+button { font-family: inherit; }
+
+/* The page is drawn once at PC size (900px wide) and scaled as a whole to fit the window. */
+#stage { margin: 0 auto; width: 900px; overflow: hidden; }
+.wrap { width: 900px; transform-origin: 0 0; }
+
+/* header */
+.top { display: flex; align-items: center; gap: 14px; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+.monthbar { display: flex; align-items: center; gap: 6px; }
+h2 { margin: 0; font-size: 17px; font-weight: 700; min-width: 7.2em; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nav, .todaybtn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 8px; height: 32px; cursor: pointer; font-size: 18px; line-height: 1;
+}
+.nav { width: 32px; }
+.todaybtn { padding: 0 12px; font-size: 13px; font-weight: 500; margin-left: 4px; }
+.meta { margin-left: auto; text-align: right; }
+.sum { margin: 0; font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+.stamp { display: block; font-size: 11px; color: var(--ink-2); }
+:is(.nav, .todaybtn, .pill, .chip, .key, #sheetClose):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* type toggles + brokers */
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 12px 0 10px; }
+.legend { display: flex; gap: 6px; }
+.key { display: inline-flex; gap: 5px; align-items: center; min-height: 30px; padding: 0 11px; border: 0; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; background: var(--c-bg); color: var(--c-fg); }
+.key b { opacity: .65; }
+.key[aria-pressed="false"] { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); text-decoration: line-through; }
+.key[aria-pressed="false"] b { opacity: 1; text-decoration: none; }
+.brokers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.pill b { margin-left: 4px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pill[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.pill[aria-pressed="true"] b { color: inherit; }
+
+/* calendar */
+.k-sub { --c-bg: var(--sub-bg); --c-fg: var(--sub-fg); }
+.k-ref { --c-bg: var(--ref-bg); --c-fg: var(--ref-fg); }
+.k-lst { --c-bg: var(--lst-bg); --c-fg: var(--lst-fg); }
+.k-spc { --c-bg: var(--spc-bg); --c-fg: var(--spc-fg); }
+
+.cal { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.dow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); }
+.dow span { text-align: center; font-size: 12.5px; font-weight: 600; color: var(--ink-2); padding: 5px 0; }
+/* a week box is at least 5 text lines tall; a bar row holds 3 lines of text */
+.week {
+  --nm: 12px; --me: 11px; --lh: 1.25; --row: 49px;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: 1px;
+  min-height: calc(22px + 5 * var(--nm) * var(--lh)); border-top: 1px solid var(--line);
+}
+.cb { background: var(--surface); }
+.cb:not(:first-child) { border-left: 1px solid var(--line); }
+.cb.out { background: var(--out); }
+.cb.today { background: var(--today); }
+.dn { grid-row: 1; justify-self: end; padding: 2px 7px 1px; font-size: 11px; line-height: 1.3; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.dn.out { opacity: .75; }
+.dn.today b { background: var(--ink); color: var(--surface); border-radius: 99px; min-width: 19px; text-align: center; padding: 0 5px; font-weight: 600; display: inline-block; }
+
+.chip {
+  display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; overflow: hidden;
+  margin: 0; padding: 3px 8px 2px; text-align: left; border: 0; border-radius: 0; cursor: pointer;
+  justify-self: stretch; align-self: stretch;
+  background: var(--c-bg); color: var(--c-fg);
+  box-shadow: inset 1px 0 0 var(--surface), inset -1px 0 0 var(--surface);
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.chip.est { outline: 1px dashed currentColor; outline-offset: -3px; }
+.chip.sub2 { background: color-mix(in srgb, var(--c-bg) 50%, var(--surface)); }
+.nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--nl, 1); overflow: hidden; font-size: var(--nm); line-height: var(--lh); font-weight: 600; }
+.sub2 .nm { font-weight: 500; }
+.tag { font-weight: 700; margin-right: 3px; opacity: .65; }
+.ln, .px { display: block; font-size: var(--me); line-height: var(--lh); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln { opacity: .82; }
+.px { font-variant-numeric: tabular-nums; }
+.px.band { font-weight: 500; opacity: .88; }
+.px.fix { font-weight: 700; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.chip.dim { opacity: .18; }
+
+.foot { margin: 10px 0 0; font-size: 11px; color: var(--ink-2); line-height: 1.5; }
+
+/* Phone layout (window narrower than 700px): controls stay at real size so they are easy to tap,
+   and only the calendar is scaled to fit the screen, edge to edge. */
+.stamp2 { display: none; }
+#calscale { transform-origin: 0 0; }
+#tail { height: 0; }
+html.mob body { padding-block: 22px 10px; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+html.mob #stage { width: auto !important; height: auto !important; overflow: visible; margin: 0; }
+html.mob .wrap { width: auto; transform: none !important; display: flow-root; }
+html.mob h1, html.mob .meta { display: none; }
+html.mob .top { padding: 0 10px; }
+html.mob .monthbar { width: 100%; justify-content: center; gap: 8px; }
+html.mob h2 { font-size: 16px; min-width: 6.4em; }
+html.mob .nav { width: 28px; height: 25px; font-size: 16px; border-radius: 6px; }
+html.mob .todaybtn { height: 25px; padding: 0 11px; font-size: 11px; margin-left: 4px; border-radius: 6px; }
+html.mob .tools { display: block; margin: 10px 0 9px; padding: 0 10px; }
+html.mob .legend { display: flex; justify-content: flex-start; flex-wrap: nowrap; gap: 5px; }
+html.mob .key { min-height: 23px; padding: 0 9px; justify-content: center; gap: 3px; font-size: 11px; line-height: 1; white-space: nowrap; border-radius: 5px; }
+html.mob .brokers { margin-top: 7px; flex-wrap: nowrap; gap: 5px; }
+html.mob .lbl { flex: none; font-size: 10.5px; margin-right: 1px; }
+html.mob .pills { flex: 1; min-width: 0; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -10px; padding-right: 10px; }
+html.mob .pills::-webkit-scrollbar { display: none; }
+html.mob .pill { flex: none; min-height: 19px; padding: 0 6px; font-size: 10.5px; line-height: 1; }
+html.mob .pill b { margin-left: 3px; }
+html.mob #calstage { overflow: hidden; }
+html.mob .cal { border-left: 0; border-right: 0; border-radius: 0; }
+html.mob .foot { margin-top: 6px; padding: 0 10px; font-size: 7.5px; line-height: 1.3; }
+html.mob .f1 { display: none; }
+html.mob .stamp2 { display: block; }
+
+/* Short phone screens: bars switch to the blogger's two-line form (name + broker, then price)
+   so the calendar text can stay at least as large as the blogger's without scrolling. */
+html.mob.compact .week { --row: 38px; }
+html.mob.compact body { padding-block: 8px 6px; }
+html.mob.compact .tools { margin: 10px 0 8px; }
+html.mob.compact .brokers { margin-top: 8px; }
+html.mob.compact .foot { margin-top: 6px; }
+html.mob.compact .chip { display: grid; grid-template-columns: minmax(0, auto) max-content 1fr; align-content: start; align-items: baseline; column-gap: 4px; }
+html.mob.compact .nm { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+html.mob.compact .ln { flex: none; }
+html.mob.compact .px { grid-column: 1 / -1; }
+@media (prefers-reduced-motion: no-preference) {
+  #weeks.in-l { animation: inL .22s ease-out; }
+  #weeks.in-r { animation: inR .22s ease-out; }
+  @keyframes inL { from { opacity: 0; transform: translateX(28px); } }
+  @keyframes inR { from { opacity: 0; transform: translateX(-28px); } }
+}
+
+/* Phone: calendar text is heavier, fully opaque and a touch larger so it stays readable when scaled down. */
+html.mob .week { --nm: 12.5px; --me: 11.5px; --row: 53px; }
+html.mob .nm { font-weight: 700; }
+html.mob .sub2 .nm { font-weight: 600; }
+html.mob .tag { opacity: .9; }
+html.mob .ln { opacity: 1; font-weight: 500; }
+html.mob .px.band { opacity: 1; font-weight: 600; }
+html.mob .chip { -webkit-text-stroke: 0.2px currentColor; padding: 4px 8px; }
+html.mob .dn { color: var(--ink); font-weight: 600; font-size: 11.5px; }
+html.mob .dow span { color: var(--ink); font-weight: 700; }
+
+/* detail sheet */
+.scrim { position: fixed; inset: 0; background: rgba(8, 12, 18, .5); z-index: 20; }
+.sheet {
+  position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 520px;
+  background: var(--surface); color: var(--ink);
+  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, .18);
+  padding-top: 18px;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 640px) {
+  .sheet { bottom: auto; top: 50%; transform: translateY(-50%); border-radius: 16px; padding-bottom: 22px; }
+}
+.sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sheet h3 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+.badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; vertical-align: 2px; background: var(--spc-bg); color: var(--spc-fg); }
+#sheetClose { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; cursor: pointer; font-size: 15px; }
+.kv { display: grid; grid-template-columns: 4.6em minmax(0, 1fr); gap: 12px 12px; margin: 16px 0 0; }
+.kv dt { color: var(--ink-2); font-size: 13px; font-weight: 500; padding-top: 1px; }
+.kv dd { margin: 0; font-size: 14.5px; }
+.kv .big { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kv small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .scrim { animation: fade .15s ease-out; }
+  .sheet { animation: rise .18s ease-out; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes rise { from { opacity: 0; translate: 0 12px; } }
+}
+</style>
+
+<div id="stage"><div class="wrap" id="wrap">
+  <header class="top">
+    <h1>공모주 캘린더</h1>
+    <div class="monthbar">
+      <button class="nav" id="prev" type="button" aria-label="이전 달">‹</button>
+      <h2 id="monthLabel"></h2>
+      <button class="nav" id="next" type="button" aria-label="다음 달">›</button>
+      <button class="todaybtn" id="todayBtn" type="button">오늘</button>
+    </div>
+    <div class="meta">
+      <p class="sum" id="sum"></p>
+      <span class="stamp" id="stamp"></span>
+    </div>
+  </header>
+
+  <div class="tools">
+    <div class="legend" aria-label="일정 종류 켜고 끄기">
+      <button type="button" class="key k-sub" data-cat="sub" aria-pressed="true"><b>청</b>청약</button>
+      <button type="button" class="key k-ref" data-cat="ref" aria-pressed="true"><b>환</b>환불</button>
+      <button type="button" class="key k-lst" data-cat="lst" aria-pressed="true"><b>상</b>상장</button>
+      <button type="button" class="key k-spc" data-cat="spc" aria-pressed="true"><b>청</b>스팩 청약</button>
+    </div>
+    <div class="brokers">
+      <span class="lbl">증권사</span>
+      <div class="pills" id="pills"></div>
+    </div>
+  </div>
+
+  <div id="calstage"><div id="calscale">
+    <section class="cal" aria-label="월간 공모주 일정">
+      <div class="dow"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span></div>
+      <div id="weeks"></div>
+    </section>
+  </div></div>
+
+  <p class="foot"><span id="stamp2" class="stamp2"></span><span class="f1">위 버튼으로 청약·환불·상장을 켜고 끌 수 있어요. </span>굵은 숫자는 확정 공모가(<span class="up">빨강</span> 밴드 상단 이상, <span class="down">파랑</span> 하단 이하), 옅은 숫자는 확정 전 희망 밴드예요.<br>투자 참고용 정보이며 투자 권유가 아니에요. 일정과 공모가는 정정 공시로 바뀔 수 있으니 청약 전에 DART 원문을 확인하세요.</p>
+  <div id="tail" aria-hidden="true"></div>
+</div></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-head">
+    <h3 id="sheetTitle"></h3>
+    <button id="sheetClose" type="button" aria-label="닫기">✕</button>
+  </div>
+  <dl class="kv" id="sheetBody"></dl>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Sample data transcribed from the blogger's November 2026 calendar (as of 10/31).
+     Later this object is replaced by the collector's ipo.json.
+     price = confirmed offer price (null until confirmed), band = hoped-for range [low, high],
+     tone = 'up' (at/above band top) or 'down' (at/below band bottom). */
+  const D = s => '2026-' + s;
+  let DATA = {
+    updatedAt: '2026-10-31',
+    ipos: [
+      { id: 'yk',   name: '영광', brokers: ['한국'], price: 17000, tone: 'up', listing: D('11-02') },
+      { id: 'rb',   name: '래블업', brokers: ['NH'], price: 19000, tone: 'down', listing: D('11-03') },
+      { id: 'est',  name: '이에스티', brokers: ['대신'], price: 12400, tone: 'up', listing: D('11-04') },
+      { id: 'imsp', name: '아이엠스팩1호', brokers: [], spac: true, listing: D('11-04') },
+      { id: 'dwp',  name: '동원파츠', brokers: ['삼성'], band: [23000, 26500], price: 27500, tone: 'up', sub: [D('11-02'), D('11-03')], refund: D('11-05'), listing: D('11-10') },
+      { id: 'brp',  name: '바로팜', brokers: ['미래'], band: [16400, 20200], price: 16400, tone: 'down', sub: [D('11-02'), D('11-03')], refund: D('11-05'), listing: D('11-11') },
+      { id: 'nxi',  name: '넥스아이', brokers: ['한국'], band: [10500, 13000], price: 8000, tone: 'down', sub: [D('11-03'), D('11-04')], refund: D('11-06'), listing: D('11-12') },
+      { id: 'ykmc', name: '영광와이케이엠씨', brokers: ['대신'], band: [9400, 11000], sub: [D('11-04'), D('11-05')], refund: D('11-09') },
+      { id: 'opt',  name: '옵토닉스', brokers: ['한국'], band: [10000, 12000], price: 12000, tone: 'up', sub: [D('11-05'), D('11-06')], refund: D('11-10'), listing: D('11-16') },
+      { id: 'alr',  name: '에이엘로봇', brokers: ['대신'], band: [15700, 17600], sub: [D('11-06'), D('11-09')], refund: D('11-11') },
+      { id: 'hana', name: '하나에어로다이내믹스', brokers: ['IBK'], band: [4700, 5700], sub: [D('11-10'), D('11-11')], refund: D('11-13') },
+      { id: 'cnm',  name: '씨앤엠', brokers: ['한국'], band: [10000, 13000], sub: [D('11-12'), D('11-13')], refund: D('11-17') },
+      { id: 'mbd',  name: '엠비디', brokers: ['하나'], band: [9400, 11500], sub: [D('11-12'), D('11-13')], refund: D('11-17') },
+      { id: 'jnt',  name: '제이앤티지', brokers: ['대신', 'NH'], band: [26400, 31900], sub: [D('11-12'), D('11-13')], refund: D('11-17') },
+      { id: 'dbo',  name: '다비오', brokers: ['대신'], refund: D('11-13') },
+      { id: 'sfc',  name: '에스에프씨', brokers: ['미래', '한국', '삼성'], band: [31600, 36100], sub: [D('11-18'), D('11-19')], refund: D('11-24') },
+      { id: 'uct',  name: '유캐스트', brokers: ['유진', '신영'], band: [19000, 23000], sub: [D('11-18'), D('11-19')], refund: D('11-24') },
+      { id: 'adl',  name: '아델', brokers: ['삼성', '미래'], band: [18000, 25000], sub: [D('11-23'), D('11-24')], refund: D('11-26') },
+      { id: 'kmf',  name: '케이엠에프', brokers: ['IBK'], band: [15000, 17800], sub: [D('11-24'), D('11-25')], refund: D('11-27') },
+      { id: 'znn',  name: '제논', brokers: ['삼성'], band: [9700, 12200], sub: [D('11-24'), D('11-25')], refund: D('11-27') },
+      { id: 'shs',  name: '신영해피투모로우제12호스팩', brokers: ['신영'], spac: true, sub: [D('11-24'), D('11-25')], refund: D('11-27') },
+      { id: 'anh',  name: '에이엔에이치스트럭쳐', brokers: ['NH'], band: [11200, 13600], sub: [D('11-27'), D('11-30')], refund: D('12-02') }
+    ]
+  };
+
+  const DAY = 86400000;
+  const WD = ['일', '월', '화', '수', '목', '금', '토'];
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = n => Number(n).toLocaleString('en-US');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ts = s => { const a = s.split('-').map(Number); return Date.UTC(a[0], a[1] - 1, a[2]); };
+  const parts = t => { const x = new Date(t); return { y: x.getUTCFullYear(), m: x.getUTCMonth() + 1, d: x.getUTCDate(), w: x.getUTCDay() }; };
+  const isoOf = t => { const p = parts(t); return p.y + '-' + pad(p.m) + '-' + pad(p.d); };
+  const kstToday = () => { const t = new Date(Date.now() + 9 * 3600 * 1000); return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()); };
+  const longDate = s => { const p = parts(ts(s)); return p.m + '월 ' + p.d + '일 (' + WD[p.w] + ')'; };
+  const ymOf = s => s.slice(0, 7);
+
+  /* ---- events by date ---- */
+  let EVENTS = {};
+  let byId = {};
+  let dataMonths = [];
+  function rebuild() {
+    EVENTS = {}; byId = {};
+    const add = (date, ev) => { (EVENTS[date] = EVENTS[date] || []).push(ev); };
+    DATA.ipos.forEach(p => {
+      p.brokers = p.brokers || [];
+      byId[p.id] = p;
+      if (p.listing) add(p.listing, { p: p, kind: 'listing', o: 0 });
+      if (p.refund) add(p.refund, { p: p, kind: 'refund', o: 1 });
+      if (p.sub) { add(p.sub[0], { p: p, kind: 'sub1', o: 2 }); add(p.sub[1], { p: p, kind: 'sub2', o: 3 }); }
+    });
+    Object.keys(EVENTS).forEach(k => EVENTS[k].sort((a, b) => a.o - b.o));
+    dataMonths = Array.from(new Set(DATA.ipos.filter(p => p.sub).map(p => ymOf(p.sub[0])))).sort();
+  }
+  rebuild();
+
+  /* ---- state ---- */
+  const today = kstToday();
+  const todayP = parts(today);
+  function homeMonth() {
+    const k = todayP.y + '-' + pad(todayP.m);
+    const use = dataMonths.indexOf(k) >= 0 || !dataMonths.length ? k : dataMonths[dataMonths.length - 1];
+    const a = use.split('-').map(Number);
+    return { y: a[0], m: a[1] };
+  }
+  const state = Object.assign({ broker: null, visible: { sub: true, ref: true, lst: true, spc: true } }, homeMonth());
+  let lastFocus = null;
+
+  /* ---- helpers ---- */
+  function monthIpos(y, m) {
+    const k = y + '-' + pad(m);
+    return DATA.ipos.filter(p => p.sub && ymOf(p.sub[0]) === k);
+  }
+  function tone(p) {
+    if (p.price == null) return '';
+    if (p.tone) return p.tone;
+    if (p.band) return p.price >= p.band[1] ? 'up' : (p.price <= p.band[0] ? 'down' : '');
+    return '';
+  }
+  function position(p) {
+    if (!p.band || p.price == null) return '';
+    const lo = p.band[0], hi = p.band[1];
+    if (p.price > hi) return '밴드 상단 초과';
+    if (p.price === hi) return '밴드 상단';
+    if (p.price < lo) return '밴드 하단 미만';
+    if (p.price === lo) return '밴드 하단';
+    return '밴드 안';
+  }
+  function priceHtml(p) {
+    if (p.price != null) return '<span class="px fix ' + tone(p) + '">' + fmt(p.price) + '</span>';
+    if (p.band) return '<span class="px band">' + fmt(p.band[0]) + '–<wbr>' + fmt(p.band[1]) + '</span>';
+    return '';
+  }
+  function priceText(p) {
+    if (p.price != null) return '확정 공모가 ' + fmt(p.price) + '원';
+    if (p.band) return '희망 공모가 ' + fmt(p.band[0]) + '원에서 ' + fmt(p.band[1]) + '원';
+    return '';
+  }
+
+  /* ---- calendar ---- */
+  const catOf = ev => ev.kind === 'listing' ? 'lst' : ev.kind === 'refund' ? 'ref' : (ev.p.spac ? 'spc' : 'sub');
+  
+  function chipHtml(it, dimmed) {
+    const ev = it.ev, p = ev.p;
+    const k = catOf(ev);
+    const tag = { lst: '상', ref: '환', sub: '청', spc: '청' }[k];
+    const br = p.brokers.join('/');
+    const label = it.span === 2 ? '청약 1일차와 2일차' : { listing: '상장', refund: '환불', sub1: '청약 첫째 날', sub2: '청약 둘째 날' }[ev.kind];
+    /* stacked as before: name, brokers, price. A bar holds three lines; the name takes what the others leave. */
+    const lines = [];
+    if (ev.kind === 'sub2') {
+      lines.push('<span class="ln">2일차</span>');
+    } else {
+      if (br) lines.push('<span class="ln">' + esc(br) + '</span>');
+      if (ev.kind !== 'refund') { const px = priceHtml(p); if (px) lines.push(px); }
+    }
+    const nl = Math.max(1, 3 - lines.length);
+    const inner = '<span class="nm" style="--nl:' + nl + '"><span class="tag">' + tag + '</span>' + esc(p.name) + '</span>' + lines.join('');
+    const cls = 'chip k-' + k + (ev.kind === 'listing' && p.listingEst ? ' est' : '') + (ev.kind === 'sub2' ? ' sub2' : '') + (it.span === 2 ? ' span' : '') + (it.past ? ' past' : '') + (dimmed ? ' dim' : '');
+    const style = 'grid-column:' + (it.col + 1) + (it.span === 2 ? ' / span 2' : '') + ';grid-row:' + (it.row + 2);
+    const aria = p.name + ' ' + label + (br ? ', ' + br : '') + (ev.kind !== 'refund' && priceText(p) ? ', ' + priceText(p) : '');
+    return '<button type="button" class="' + cls + '" style="' + style + '" data-ipo="' + esc(p.id) + '" aria-label="' + esc(aria) + '">' + inner + '</button>';
+  }
+
+  /* One week = one grid. Rows are shared by all five days, so a subscription that spans
+     two days sits on the same row in both and is drawn as a single bar. */
+  function weekHtml(w, m) {
+    const ds = [0, 1, 2, 3, 4].map(i => w + i * DAY);
+    const evs = ds.map(t => (EVENTS[isoOf(t)] || []).filter(ev => state.visible[catOf(ev)]));
+    const spanned = (ev, i) => ev.kind === 'sub1' && i < 4 && ev.p.sub[1] === isoOf(ds[i + 1]);
+    const consumed = (ev, i) => ev.kind === 'sub2' && i > 0 && ev.p.sub[0] === isoOf(ds[i - 1]);
+    const rows = [[], [], [], [], []];
+    const items = [];
+    let n = 0;
+    evs.forEach((list, i) => {
+      list.filter(ev => !spanned(ev, i) && !consumed(ev, i)).forEach((ev, r) => {
+        rows[i][r] = 1; n = Math.max(n, r + 1);
+        items.push({ ev: ev, col: i, span: 1, row: r, past: ds[i] < today });
+      });
+    });
+    evs.forEach((list, i) => {
+      list.filter(ev => spanned(ev, i)).forEach(ev => {
+        let r = 0;
+        while (rows[i][r] || rows[i + 1][r]) r++;
+        rows[i][r] = 1; rows[i + 1][r] = 1; n = Math.max(n, r + 1);
+        items.push({ ev: ev, col: i, span: 2, row: r, past: ds[i + 1] < today });
+      });
+    });
+    let h = '<div class="week" style="grid-template-rows:auto ' + (n ? 'repeat(' + n + ',var(--row)) ' : '') + 'minmax(3px,1fr)">';
+    ds.forEach((t, i) => {
+      h += '<div class="cb' + (parts(t).m === m ? '' : ' out') + (t === today ? ' today' : '') + '" style="grid-column:' + (i + 1) + ';grid-row:1/-1"></div>';
+    });
+    ds.forEach((t, i) => {
+      const p = parts(t);
+      const inM = p.m === m;
+      h += '<div class="dn' + (inM ? '' : ' out') + (t === today ? ' today' : '') + '" style="grid-column:' + (i + 1) + '"><b>' + (inM ? p.d : p.m + '/' + p.d) + '</b></div>';
+    });
+    items.forEach(it => { h += chipHtml(it, state.broker && it.ev.p.brokers.indexOf(state.broker) < 0); });
+    return h + '</div>';
+  }
+
+  function weeksHtml(y, m) {
+    let first = Date.UTC(y, m - 1, 1);
+    while ([0, 6].indexOf(parts(first).w) >= 0) first += DAY;
+    const start = first - ((parts(first).w + 6) % 7) * DAY;
+    let last = Date.UTC(y, m, 0);
+    while ([0, 6].indexOf(parts(last).w) >= 0) last -= DAY;
+    const end = last - ((parts(last).w + 6) % 7) * DAY;
+    let html = '';
+    for (let w = start; w <= end; w += 7 * DAY) html += weekHtml(w, m);
+    return html;
+  }
+
+  function render() {
+    const y = state.y, m = state.m;
+    $('monthLabel').textContent = y + '년 ' + m + '월';
+    document.querySelectorAll('[data-cat]').forEach(b => b.setAttribute('aria-pressed', String(state.visible[b.getAttribute('data-cat')])));
+    $('stamp').textContent = DATA.live
+      ? 'DART 공시 기준 ' + Number(DATA.updatedAt.slice(5, 7)) + '/' + Number(DATA.updatedAt.slice(8, 10)) + (DATA.updatedAt.length > 10 ? ' ' + DATA.updatedAt.slice(11, 16) : '')
+      : '기준 ' + Number(DATA.updatedAt.slice(5, 7)) + '/' + Number(DATA.updatedAt.slice(8)) + ' · 샘플 데이터';
+
+    $('stamp2').textContent = $('stamp').textContent;
+    const list = monthIpos(y, m);
+    const reg = list.filter(p => !p.spac).length;
+    const spc = list.length - reg;
+    $('sum').textContent = list.length ? '일반 청약 ' + reg + '종목' + (spc ? ' · 스팩 ' + spc + '종목' : '') : '이 달 데이터가 아직 없어요';
+
+    const counts = {};
+    list.forEach(p => p.brokers.forEach(b => { counts[b] = (counts[b] || 0) + 1; }));
+    if (state.broker && !counts[state.broker]) state.broker = null;
+    $('pills').innerHTML = Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, 'ko'))
+      .map(b => '<button type="button" class="pill" data-broker="' + esc(b) + '" aria-pressed="' + (state.broker === b) + '">' + esc(b) + '<b>' + counts[b] + '</b></button>')
+      .join('');
+
+    $('weeks').innerHTML = weeksHtml(y, m);
+    fit(!dpr0);
+  }
+
+  /* ---- fit: scale the page to the window at the zoom it loaded at.
+     Browser zoom afterwards enlarges it (the page then scrolls); resizing the window refits it.
+     Wide windows scale the whole page. Phones (< 700px) keep the controls at real size and scale only the calendar,
+     choosing its design width so it fills the screen edge to edge. ---- */
+  const DW = 900, DW_MIN = 470, MOB_MAX = 700, CHROME_REF = 120, TAIL_MIN = 36;
+  let dpr0 = 0, baseSc = 1, baseDW = 600, mobBase = false;
+  function fit(rebase) {
+    const wrap = $('wrap'), stage = $('stage'), cstage = $('calstage'), cscale = $('calscale'), root = document.documentElement;
+    const dpr = window.devicePixelRatio || 1;
+    if (!dpr0) dpr0 = dpr;
+    const k = dpr / dpr0;
+    const mob = root.clientWidth * k < MOB_MAX;
+    root.classList.toggle('mob', mob);
+    const cs = getComputedStyle(document.body);
+    const px = v => parseFloat(v) || 0;
+    const availW = root.clientWidth * k - px(cs.paddingLeft) - px(cs.paddingRight);
+    const availH = window.innerHeight * k - px(cs.paddingTop) - px(cs.paddingBottom);
+
+    if (!mob) {
+      cstage.style.height = ''; cscale.style.width = ''; cscale.style.transform = ''; root.classList.remove('compact'); $('tail').style.height = '0px';
+      const ch = wrap.offsetHeight || 1;
+      const fitSc = Math.max(0.1, Math.min(1, availW / DW, (availH - 1) / ch));
+      /* resize / first load sets the size; switching month or toggling types only ever shrinks it to avoid scrolling */
+      if (rebase === true || mobBase) baseSc = fitSc;
+      mobBase = false;
+      const sc = Math.min(baseSc, fitSc);
+      wrap.style.transform = 'scale(' + sc + ')';
+      stage.style.width = Math.floor(DW * sc) + 'px';
+      stage.style.height = Math.ceil(ch * sc) + 'px';
+      return;
+    }
+
+    wrap.style.transform = ''; stage.style.width = ''; stage.style.height = '';
+    const y0 = window.scrollY;
+    $('tail').style.height = '0px';
+    if (!mobBase && rebase !== true) rebase = true;
+    cstage.style.height = '0px';
+    cscale.style.width = baseDW + 'px';
+    const measure = () => {
+      const chrome = root.classList.contains('compact') ? wrap.offsetHeight : Math.max(wrap.offsetHeight, CHROME_REF);
+      const h = window.innerHeight * k - px(cs.paddingTop) - px(cs.paddingBottom);   /* read now: padding changes with the compact class */
+      return Math.max(0.1, (h - chrome - 1) / (cscale.offsetHeight || 1));
+    };
+    /* the blogger's calendar text is about 1.3% of its width (17px on a 1320px image): keep ours at least that large */
+    const need = (availW * 17 / 1320) / 12.5;
+    if (rebase === true) root.classList.remove('compact');
+    let scH = measure();
+    if (rebase === true && scH < need) { root.classList.add('compact'); scH = measure(); }
+    const wide = Math.min(1600, Math.max(DW_MIN, availW / scH));
+    const fitSc = Math.min(availW / wide, scH);
+    if (rebase === true) { baseSc = fitSc; baseDW = wide; mobBase = true; }
+    let sc = baseSc, dw = baseDW;
+    if (fitSc < baseSc) { sc = fitSc; dw = wide; }
+    cscale.style.width = dw + 'px';
+    cscale.style.transform = 'scale(' + sc + ')';
+    cstage.style.height = Math.ceil(cscale.offsetHeight * sc) + 'px';
+
+    /* The first screen holds the whole calendar. Below the footer there is extra room, just enough
+       to scroll the calendar up to the middle of the screen for comfortable reading. */
+    const cr = cstage.getBoundingClientRect();
+    const toMid = cr.top + window.scrollY + cr.height / 2 - window.innerHeight / 2;
+    $('tail').style.height = Math.max(TAIL_MIN, Math.ceil(window.innerHeight + toMid - root.scrollHeight)) + 'px';
+    if (y0) window.scrollTo(0, y0);
+  }
+
+  /* ---- detail sheet ---- */
+  function row(dt, dd) { return '<dt>' + dt + '</dt><dd>' + dd + '</dd>'; }
+  function openSheet(id, trigger) {
+    const p = byId[id];
+    if (!p) return;
+    lastFocus = trigger || null;
+    $('sheetTitle').innerHTML = esc(p.name) + (p.spac ? '<span class="badge">스팩</span>' : '');
+    let h = '';
+    h += row('주관사', p.brokers.length ? esc(p.brokers.join(' · ')) : '정보 없음');
+    if (p.price != null) {
+      const pos = position(p);
+      h += row('공모가', '<span class="big ' + tone(p) + '">' + fmt(p.price) + '원</span><small>확정' + (pos ? ' · ' + pos : '') + '</small>' +
+        (p.band ? '<small>희망 밴드 ' + fmt(p.band[0]) + '–' + fmt(p.band[1]) + '원</small>' : ''));
+    } else if (p.band) {
+      h += row('공모가', '<span class="big">' + fmt(p.band[0]) + '–' + fmt(p.band[1]) + '원</span><small>희망 밴드 · 확정 전</small>');
+    } else {
+      h += row('공모가', '정보 없음');
+    }
+    h += row('청약', p.sub ? longDate(p.sub[0]) + ' ~ ' + longDate(p.sub[1]) : '이 달 일정에 없음');
+    h += row('환불', p.refund ? longDate(p.refund) : '—');
+    h += row('상장', p.listing ? longDate(p.listing) + (p.listingEst ? '<small>예상일 · 거래소 공지 전</small>' : '') : (p.sub ? '미정' : '—'));
+    $('sheetBody').innerHTML = h;
+    $('scrim').hidden = false;
+    $('sheet').hidden = false;
+    $('sheetClose').focus();
+  }
+  function closeSheet() {
+    $('scrim').hidden = true;
+    $('sheet').hidden = true;
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    lastFocus = null;
+  }
+
+  /* ---- events ---- */
+  function slide(dir) {
+    const w = $('weeks');
+    w.classList.remove('in-l', 'in-r');
+    void w.offsetWidth;
+    w.classList.add(dir === 'l' ? 'in-l' : 'in-r');
+  }
+  function shift(n, dir) {
+    const t = Date.UTC(state.y, state.m - 1 + n, 1);
+    const p = parts(t);
+    state.y = p.y; state.m = p.m; state.touched = true;
+    render();
+    if (dir) slide(dir);
+  }
+  document.addEventListener('click', e => {
+    const chip = e.target.closest('[data-ipo]');
+    if (chip) { openSheet(chip.getAttribute('data-ipo'), chip); return; }
+    const key = e.target.closest('[data-cat]');
+    if (key) {
+      const c = key.getAttribute('data-cat');
+      state.visible[c] = !state.visible[c];
+      render();
+      const back = document.querySelector('[data-cat="' + c + '"]');
+      if (back) back.focus();
+      return;
+    }
+    const pill = e.target.closest('[data-broker]');
+    if (pill) {
+      const b = pill.getAttribute('data-broker');
+      state.broker = state.broker === b ? null : b;
+      render();
+      const again = document.querySelector('[data-broker="' + b + '"]');
+      if (again) again.focus();
+    }
+  });
+  $('prev').addEventListener('click', () => shift(-1, 'r'));
+  $('next').addEventListener('click', () => shift(1, 'l'));
+  $('todayBtn').addEventListener('click', () => { const h = homeMonth(); state.y = h.y; state.m = h.m; render(); });
+  $('scrim').addEventListener('click', closeSheet);
+  $('sheetClose').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+
+  /* swipe left / right to change month (phone layout only) */
+  let sw = null;
+  /* While the page is pinch-zoomed the browser takes the drag and pans the view, so no month swipe arrives.
+     Where the zoom can be read (visualViewport) swipes are also ignored outright. */
+  function zoomed() {
+    const vv = window.visualViewport;
+    return !!vv && Math.abs(vv.scale - 1) > 0.01;
+  }
+  document.addEventListener('touchstart', e => {
+    const root = document.documentElement;
+    if (zoomed() || !root.classList.contains('mob') || e.touches.length !== 1 || !$('sheet').hidden || (e.target.closest && e.target.closest('.pills'))) { sw = null; return; }
+    const t = e.touches[0];
+    sw = { x: t.clientX, y: t.clientY, at: Date.now() };
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!sw || zoomed()) { sw = null; return; }
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sw.x, dy = t.clientY - sw.y, dt = Date.now() - sw.at;
+    sw = null;
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 700) shift(dx < 0 ? 1 : -1, dx < 0 ? 'l' : 'r');
+  }, { passive: true });
+  document.addEventListener('touchcancel', () => { sw = null; }, { passive: true });
+
+  render();
+
+  /* Live data: the collector writes data/ipo.json next to this page. If it is missing or
+     malformed (e.g. this preview), the sample data above stays on screen. */
+  function loadLive() {
+    if (!window.fetch || location.protocol === 'file:') return;
+    fetch('data/ipo.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => {
+        if (!j || !Array.isArray(j.ipos) || !j.ipos.length || !j.updatedAt) return;
+        DATA = { updatedAt: j.updatedAt, ipos: j.ipos, live: true };
+        rebuild();
+        const h = homeMonth();
+        if (!state.touched) { state.y = h.y; state.m = h.m; }
+        render();
+      })
+      .catch(() => {});
+  }
+  loadLive();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadLive(); });
+  window.addEventListener('resize', () => fit(true));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fit(true));
+})();
+</script>
+
+</body>
+</html>
