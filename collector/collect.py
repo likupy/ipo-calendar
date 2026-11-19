@@ -435,7 +435,7 @@ def main():
             continue
         if item and item.get("sub"):
             o = old.get(item["id"])
-            if o and o.get("band") and "band" not in item:   # 확정 공시에는 밴드가 없으니 이전 값 유지
+            if o and o.get("band") and o["band"][0] != o["band"][1] and "band" not in item:   # 확정 공시에는 밴드가 없으니 이전 값 유지
                 item["band"] = o["band"]
                 if item.get("price") is not None:
                     b = item["band"]
