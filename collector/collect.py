@@ -411,7 +411,11 @@ def main():
         except Exception as e:
             log("기존 ipo.json 읽기 실패(무시):", e)
 
-    OLD_JSON = json.dumps(old, sort_keys=True, ensure_ascii=False)
+    if old_doc.get("v") != 2:   # 데이터 규칙을 바꿨을 때 한 번만: 이전 방식으로 들어간 상장일은 버린다
+        for p in old.values():
+            p.pop("listing", None)
+            p.pop("listingEst", None)
+        OLD_JSON = json.dumps(old, sort_keys=True, ensure_ascii=False)
     global T38
     T38 = fetch_38()
     cands = candidates()
@@ -465,11 +469,11 @@ def main():
     if not ipos and failed:
         sys.exit("수집 결과가 비어 있어 기존 파일을 덮어쓰지 않습니다.")
 
-    if old and "debug" not in old_doc and "probe" not in old_doc and OLD_JSON == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False):
+    if old and old_doc.get("v") == 2 and "debug" not in old_doc and "probe" not in old_doc and OLD_JSON == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos}
+    doc = {"v": 2, "updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART+38", "ipos": ipos}
     if DEBUG:
         doc["debug"] = DEBUG
 
