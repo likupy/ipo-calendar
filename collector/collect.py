@@ -66,7 +66,7 @@ def call(path, **params):
 DEBUG = []
 DOC_BUDGET = [25]
 LST_BUDGET = [40]
-DEBUG_DUMP = True   # 원인 파악용(확인되면 False)   # 한 번 실행에서 본문을 내려받는 최대 횟수
+DEBUG_DUMP = False   # 원인 파악용(확인되면 False)   # 한 번 실행에서 본문을 내려받는 최대 횟수
 
 
 def doc_text(rcept_no):
@@ -261,15 +261,9 @@ def build_one(corp, flags_out):
         if band is None and txt:
             flags.append("본문에서 희망밴드 못 찾음")
 
-    # 상장일: DART 구조화 항목에는 없어서, 최신 공시 원문에서 '상장예정일' 류 문구를 찾는다
+    # 상장일은 DART 공시에 없다(원문 검색은 엉뚱한 날짜를 집어서 제거). 확인된 출처가 생길 때까지 표시하지 않는다.
     lst_doc = None
-    if LST_BUDGET[0] > 0 and not corp.get("_have_listing"):
-        LST_BUDGET[0] -= 1
-        t2 = doc_text(corp["rcept_no"])
-        lst_doc = listing_from_doc(t2)
-        for m in re.finditer(r"상장\s*(?:예정)?\s*(?:일|기일)", t2):
-            if len(doc_hits) < 6:
-                doc_hits.append(t2[max(0, m.start() - 50): m.start() + 120])
+
     if DEBUG_DUMP and len(DEBUG) < 10:
         DEBUG.append({"name": corp["corp_name"], "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt") if k in corp},
                       "sbd": g.get("sbd"), "pymd": g.get("pymd"), "listing_found": iso(lst_doc), "doc_hits": doc_hits})
@@ -290,9 +284,6 @@ def build_one(corp, flags_out):
             flags.append("환불일=청약종료+2영업일 추정")
     listing = lst_doc
     listing_est = False
-    if listing is None and refund:
-        listing = add_bd(refund, LISTING_GAP_BD)
-        listing_est = True
 
     item = {
         "id": corp["corp_code"],
