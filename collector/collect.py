@@ -399,7 +399,39 @@ def info_38(texts, name, sub_start):
 
 
 # ---------------------------------------------------------------- 메인
+def probe_38():
+    """38 페이지 구조 확인용(임시): 목록의 상세 링크와 상세 페이지 본문을 기록."""
+    out = {}
+    urls = {"sched": "http://www.38.co.kr/html/fund/index.htm?o=k", "sched2": "http://www.38.co.kr/html/fund/index.htm?o=k&page=2",
+            "new": "http://www.38.co.kr/html/fund/index.htm?o=nw", "detail": "https://www.38.co.kr/html/fund/?o=v&no=2333&l=&page=1",
+            "cal": "http://www.38.co.kr/html/fund/index.htm?o=c"}
+    for k, url in urls.items():
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                raw = r.read()
+            try:
+                body = raw.decode("utf-8")
+            except Exception:
+                body = raw.decode("cp949", "replace")
+            e = {"len": len(body)}
+            e["links"] = [[h, re.sub(r"<[^>]+>|\s+", " ", t).strip()] for h, t in re.findall(r'<a[^>]+href="([^"]*o=v[^"]*)"[^>]*>(.*?)</a>', body, re.S)][:80]
+            txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body.replace("&nbsp;", " ")))
+            e["text"] = txt[:200] if k != "detail" else txt[:6000]
+            i = body.find("상장일")
+            e["html_listing"] = body[max(0, i - 600): i + 900] if i >= 0 and k == "detail" else None
+            out[k] = e
+        except Exception as ex:
+            out[k] = {"error": str(ex)}
+    return out
+
+
 def main():
+    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")) if os.path.exists(OUT) else {"ipos": []}
+        d["probe"] = probe_38()
+        json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
