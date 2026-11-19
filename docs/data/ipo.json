@@ -400,31 +400,5 @@
     10500
    ]
   }
- ],
- "probe": {
-  "38_sched": {
-   "status": 200,
-   "len": 73097,
-   "text": " 공모주일정 - 공모청약일정, 공모주청약, 공모주분석, 기업공개, 상장, 공모일정, 공모주청약일정, 공모가, 공모주일정, 주식수, 공모주, 공모청약 - 비상장주식거래, 장외주식시장 NO.1 38커뮤니케이션 0&&parent.frames.length) { d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);} if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i var item_rcnt_gno = item_rcnt_gno_max = 2; function rolling_menu(mode) { var total = 2; var gcnt = 1; var start, end; if (mode == 'next') item_rcnt_gno++; else if (mode == 'prev') item_rcnt_gno--; item_rcnt_gno = (item_rcnt_gno + item_rcnt_gno_max) % item_rcnt_gno_max; start = item_rcnt_gno * gcnt; end = start + gcnt; if (end+1 > total) end = total; for (i=0; i 검색 주주동호회 현재가챠트 기업개요 공시자료 매도매수검색 팝니다 삽니다 function top_scrolling(objId,height){ this.objId=objId; this.sec1=5000; //10000 this.sec2=1; this.speed=1; this.height=height; this.h=0; this.div=document.getElementById(this.objId); this.htmltxt=this.div.innerHTML; this.div.innerHTML=this.htmltxt+this.htmltxt; this.div.isover=false; this.div.onmouseover=function(){this.isover=true;} this.div.onmouseout=function(){this.isover=false;} var self=this; this.div.scrollTop=0; window.setTimeout(function(){self.play()},this.sec1); } top_scrolling.prototype={ play:function(){ var self=this; if(!this.div.isover){ this.div.scrollTop+=this.speed; if(this.div.scrollTop>this.div.scrollHeight/2){ this.div.scrollTop=0; }else{ this.h+=this.speed; if(this.h>=this.height){ if(this.h>this.height|| this.div.scrollTop%this.height !=0){ this.div.scrollTop-=this.h%this.height; } this.h=0; window.setTimeout(function(){self.play()},this.sec1); return; } } } window.setTimeout(function(){self.play()},this.sec2); } }; var hname = new Array(\"두나무\",\"노바셀테크놀로\",\"한국증권금융\"); var hcode = new Array(\"389930\",\"170190\",\"028820\"); var hname2 = new Array(\"아리바이오\",\"SK에코플랜트\",\"삼성메디슨\"); var hcode2 = new Array(\"192230\",\"003",
-   "hana": [
-    "center> &nbsp; 하나에어로다이내믹스 2026.11.10~11.11 5,700 4,700~5,700 1851.14:1 IBK투자증권 &nbsp; 에이엘로봇 2026.11.06~11.09 17,600 15,700~17,600 834.73:1 대신증권 &nbsp;<a href=\"/htm",
-    "/index.htm?o=nw\"> IPO 신규상장 일정 11/20 하나에어로다이내 11/24 엠비디 11/30 유캐스트 12/02 아델 </tr"
-   ]
-  },
-  "38_newlist": {
-   "status": 200,
-   "len": 77253,
-   "text": " 공모주일정 - 신규상장, 공모주청약, 공모주분석, 기업공개, 상장, 공모일정, 공모주청약일정, 공모가, 공모주일정, 주식수, 공모주, 공모청약 - 비상장주식거래, 장외주식시장 NO.1 38커뮤니케이션 0&&parent.frames.length) { d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);} if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i var item_rcnt_gno = item_rcnt_gno_max = 2; function rolling_menu(mode) { var total = 2; var gcnt = 1; var start, end; if (mode == 'next') item_rcnt_gno++; else if (mode == 'prev') item_rcnt_gno--; item_rcnt_gno = (item_rcnt_gno + item_rcnt_gno_max) % item_rcnt_gno_max; start = item_rcnt_gno * gcnt; end = start + gcnt; if (end+1 > total) end = total; for (i=0; i 검색 주주동호회 현재가챠트 기업개요 공시자료 매도매수검색 팝니다 삽니다 function top_scrolling(objId,height){ this.objId=objId; this.sec1=5000; //10000 this.sec2=1; this.speed=1; this.height=height; this.h=0; this.div=document.getElementById(this.objId); this.htmltxt=this.div.innerHTML; this.div.innerHTML=this.htmltxt+this.htmltxt; this.div.isover=false; this.div.onmouseover=function(){this.isover=true;} this.div.onmouseout=function(){this.isover=false;} var self=this; this.div.scrollTop=0; window.setTimeout(function(){self.play()},this.sec1); } top_scrolling.prototype={ play:function(){ var self=this; if(!this.div.isover){ this.div.scrollTop+=this.speed; if(this.div.scrollTop>this.div.scrollHeight/2){ this.div.scrollTop=0; }else{ this.h+=this.speed; if(this.h>=this.height){ if(this.h>this.height|| this.div.scrollTop%this.height !=0){ this.div.scrollTop-=this.h%this.height; } this.h=0; window.setTimeout(function(){self.play()},this.sec1); return; } } } window.setTimeout(function(){self.play()},this.sec2); } }; var hname = new Array(\"두나무\",\"노바셀테크놀로\",\"한국증권금융\"); var hcode = new Array(\"389930\",\"170190\",\"028820\"); var hname2 = new Array(\"아리바이오\",\"SK에코플랜트\",\"삼성메디슨\"); var hcode2 = new Array(\"192230\",\"00334",
-   "hana": [
-    "h=680,height=600, left=150, top=80');return false\"> 하나에어로다이내믹스 2026/11/20 -&nbsp; % &nbsp; 5,700&nbsp; -% &nbsp; -&nbsp; % &nbsp; 예정&nbsp; 에이엘로봇</fon",
-    "/index.htm?o=nw\"> IPO 신규상장 일정 11/20 하나에어로다이내 11/24 엠비디 11/30 유캐스트 12/02 아델 </tr"
-   ]
-  },
-  "ipostock": {
-   "error": "HTTP Error 406: Not Acceptable"
-  },
-  "ipostock2": {
-   "error": "HTTP Error 406: Not Acceptable"
-  }
- }
+ ]
 }

@@ -64,6 +64,7 @@ def call(path, **params):
 
 
 DEBUG = []
+T38 = {}
 DOC_BUDGET = [25]
 LST_BUDGET = [40]
 DEBUG_DUMP = False   # 원인 파악용(확인되면 False)   # 한 번 실행에서 본문을 내려받는 최대 횟수
@@ -243,14 +244,9 @@ def build_one(corp, flags_out):
     for s in stock:
         prices += parse_won(s.get("slprc"))
     band = price = None
-    confirmed = corp.get("_confirmed", False)
-    if confirmed and prices:
-        price = prices[-1]                      # 발행조건확정 공시: 확정 공모가
-    elif len(prices) >= 2:
-        band = [min(prices), max(prices)]       # 미확정: 희망 밴드
-    elif prices:
-        flags.append("가격 1개(확정 전이라 표시 안 함)")
-    else:
+    if len(prices) >= 2:
+        band = [min(prices), max(prices)]       # 값이 둘이면 밴드
+    elif not prices:
         flags.append("가격 없음")
 
     doc_hits = []
@@ -261,12 +257,15 @@ def build_one(corp, flags_out):
         if band is None and txt:
             flags.append("본문에서 희망밴드 못 찾음")
 
-    # 상장일은 DART 공시에 없다(원문 검색은 엉뚱한 날짜를 집어서 제거). 확인된 출처가 생길 때까지 표시하지 않는다.
+    # 확정 공모가·상장일: 38커뮤니케이션
     lst_doc = None
-
-    if DEBUG_DUMP and len(DEBUG) < 10:
-        DEBUG.append({"name": corp["corp_name"], "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt") if k in corp},
-                      "sbd": g.get("sbd"), "pymd": g.get("pymd"), "listing_found": iso(lst_doc), "doc_hits": doc_hits})
+    i38 = info_38(T38, corp["corp_name"], iso(sub[0]) if sub else None)
+    if i38["band"]:
+        band = i38["band"]
+    if i38["price"] is not None:
+        price = i38["price"]
+    if i38["listing"]:
+        lst_doc = i38["listing"]
 
     brokers = []
     for u in under:
@@ -340,30 +339,56 @@ def candidates():
     return list(by.values())
 
 
-# ---------------------------------------------------------------- 상장일 출처 탐색(임시)
-def probe_kind():
-    """KRX KIND 공모일정 페이지가 서버에서 열리는지, 어떤 모양인지 기록한다(결과: docs/data/probe.json)."""
+# ---------------------------------------------------------------- 38커뮤니케이션 (확정공모가 · 상장일)
+# DART 에는 확정 공모가(slprc 는 희망밴드 하단), 상장일이 없다. 38커뮤니케이션 공개 페이지에서 보완한다.
+# 서버에서 열리는 것은 확인했고, 페이지 모양이 바뀌면 이 부분만 못 읽고 나머지는 그대로 동작한다.
+URL38 = {"sched": "http://www.38.co.kr/html/fund/index.htm?o=k", "new": "http://www.38.co.kr/html/fund/index.htm?o=nw"}
+
+
+def fetch_38():
     out = {}
-    tries = {
-        "38_sched": ("GET", "http://www.38.co.kr/html/fund/index.htm?o=k", None),
-        "38_newlist": ("GET", "http://www.38.co.kr/html/fund/index.htm?o=nw", None),
-        "ipostock": ("GET", "http://www.ipostock.co.kr/sub03/ipo06.asp", None),
-        "ipostock2": ("GET", "http://www.ipostock.co.kr/sub03/ipo01.asp", None),
-    }
-    for k, (m, url, data) in tries.items():
+    for k, url in URL38.items():
         try:
-            req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode() if data else None, method=m,
-                                         headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"})
-            with urllib.request.urlopen(req, timeout=12) as r:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=20) as r:
                 raw = r.read()
-                try:
-                    body = raw.decode("utf-8")
-                except Exception:
-                    body = raw.decode("cp949", "replace")
-                out[k] = {"status": r.status, "len": len(body), "text": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))[:1800], "hana": [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body[max(0, m.start()-300): m.start()+900]))[:900] for m in re.finditer("하나에어로", body)][:2]}
+            try:
+                body = raw.decode("utf-8")
+            except Exception:
+                body = raw.decode("cp949", "replace")
+            body = body.replace("&nbsp;", " ")
+            out[k] = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))
         except Exception as e:
-            out[k] = {"error": str(e)}
+            log("38 실패", k, e)
+            out[k] = ""
     return out
+
+
+def name_key(name):
+    n = re.sub(r"\(주\)|㈜", "", name)
+    n = re.sub(r"(기업인수목적|스팩)$", "", n).strip()
+    return re.escape(n)
+
+
+def info_38(texts, name, sub_start):
+    """-> {'price': int|None, 'band': [lo,hi]|None, 'listing': date|None}"""
+    key = name_key(name)
+    pre = r"(?<![가-힣A-Za-z0-9])"
+    res = {"price": None, "band": None, "listing": None}
+    m = re.search(pre + key + r"[가-힣]{0,8}\s*(20\d\d)\.(\d\d)\.(\d\d)~\d\d\.\d\d\s+(\S+)\s+(\S+)", texts.get("sched", ""))
+    if m and (sub_start is None or sub_start[5:7] + sub_start[8:10] == m.group(2) + m.group(3)):
+        if re.fullmatch(r"[\d,]+", m.group(4)):
+            res["price"] = int(m.group(4).replace(",", ""))
+        b = re.fullmatch(r"([\d,]+)~([\d,]+)", m.group(5))
+        if b:
+            res["band"] = [int(b.group(1).replace(",", "")), int(b.group(2).replace(",", ""))]
+    m = re.search(pre + key + r"[가-힣]{0,8}\s*(20\d\d)/(\d\d)/(\d\d)", texts.get("new", ""))
+    if m:
+        try:
+            res["listing"] = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+    return res
 
 
 # ---------------------------------------------------------------- 메인
@@ -379,11 +404,8 @@ def main():
         except Exception as e:
             log("기존 ipo.json 읽기 실패(무시):", e)
 
-    probe = None
-    try:
-        probe = probe_kind()
-    except Exception as e:
-        log("probe 실패", e)
+    global T38
+    T38 = fetch_38()
     cands = candidates()
     for c in cands:
         c['_have_band'] = bool(old.get(c['corp_code'], {}).get('band'))
@@ -422,15 +444,14 @@ def main():
     if not ipos and failed:
         sys.exit("수집 결과가 비어 있어 기존 파일을 덮어쓰지 않습니다.")
 
-    if old and "debug" not in old_doc and (probe is None or "probe" in old_doc) and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
+    if old and "debug" not in old_doc and "probe" not in old_doc and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos}
     if DEBUG:
         doc["debug"] = DEBUG
-    if probe:
-        doc["probe"] = probe
+
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
