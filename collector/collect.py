@@ -402,9 +402,7 @@ def info_38(texts, name, sub_start):
 def probe_38():
     """38 페이지 구조 확인용(임시): 목록의 상세 링크와 상세 페이지 본문을 기록."""
     out = {}
-    urls = {"sched": "http://www.38.co.kr/html/fund/index.htm?o=k", "sched2": "http://www.38.co.kr/html/fund/index.htm?o=k&page=2",
-            "new": "http://www.38.co.kr/html/fund/index.htm?o=nw", "detail": "https://www.38.co.kr/html/fund/?o=v&no=2333&l=&page=1",
-            "cal": "http://www.38.co.kr/html/fund/index.htm?o=c"}
+    urls = {f"d{n}": f"http://www.38.co.kr/html/fund/?o=v&no={n}" for n in (2333, 2321, 2334, 2345, 2357)}
     for k, url in urls.items():
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -415,11 +413,11 @@ def probe_38():
             except Exception:
                 body = raw.decode("cp949", "replace")
             e = {"len": len(body)}
-            e["links"] = [[h, re.sub(r"<[^>]+>|\s+", " ", t).strip()] for h, t in re.findall(r'<a[^>]+href="([^"]*o=v[^"]*)"[^>]*>(.*?)</a>', body, re.S)][:80]
+            e["links"] = []
             txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body.replace("&nbsp;", " ")))
-            e["text"] = txt[:200] if k != "detail" else txt[:6000]
+            e["text"] = txt[:4500]
             i = body.find("상장일")
-            e["html_listing"] = body[max(0, i - 600): i + 900] if i >= 0 and k == "detail" else None
+            e["html_listing"] = body[max(0, i - 500): i + 700] if i >= 0 and k in ("d2333", "d2321") else None
             out[k] = e
         except Exception as ex:
             out[k] = {"error": str(ex)}
