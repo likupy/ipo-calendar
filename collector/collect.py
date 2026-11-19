@@ -64,7 +64,9 @@ def call(path, **params):
 
 
 DEBUG = []
-DOC_BUDGET = [25]   # 한 번 실행에서 본문을 내려받는 최대 횟수
+DOC_BUDGET = [25]
+LST_BUDGET = [40]
+DEBUG_DUMP = True   # 원인 파악용(확인되면 False)   # 한 번 실행에서 본문을 내려받는 최대 횟수
 
 
 def doc_text(rcept_no):
@@ -91,6 +93,18 @@ def doc_text(rcept_no):
 
 
 BAND_RE = re.compile(r"희망\s*공모(?:가|가액|가격)[^0-9]{0,60}?([\d,]{4,9})\s*원?\s*(?:~|∼|～|-|에서)\s*([\d,]{4,9})")
+
+
+LST_RE = re.compile(r"상장\s*(?:예정)?\s*(?:일|기일)[^0-9]{0,40}(20\d{2})\s*[.\-년/]\s*(\d{1,2})\s*[.\-월/]\s*(\d{1,2})")
+
+
+def listing_from_doc(text):
+    for m in LST_RE.finditer(text):
+        try:
+            return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+    return None
 
 
 def band_from_doc(text):
@@ -201,6 +215,8 @@ def latest(items):
 
 
 def build_one(corp, flags_out):
+    if "철회" in corp.get("report_nm", ""):
+        return "WITHDRAWN"
     """list.json 의 한 회사 -> 캘린더 항목. 실패하면 None."""
     end = datetime.now(KST).strftime("%Y%m%d")
     bgn = (datetime.now(KST) - timedelta(days=LOOKBACK_DAYS)).strftime("%Y%m%d")
@@ -244,14 +260,19 @@ def build_one(corp, flags_out):
         band = band_from_doc(txt)
         if band is None and txt:
             flags.append("본문에서 희망밴드 못 찾음")
-        for m in re.finditer("희망", txt):
-            if len(doc_hits) < 4:
-                doc_hits.append(txt[max(0, m.start() - 60): m.start() + 140])
-    if os.environ.get("DEBUG_DUMP") and len(DEBUG) < 8:
-        if True:
-            DEBUG.append({"name": corp["corp_name"], "confirmed": corp.get("_confirmed"), "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt", "corp_cls", "stock_code") if k in corp},
-                          "estkRs": {k: (v[:6] if isinstance(v, list) else v) for k, v in r.items()},
-                          "doc_hits": doc_hits})
+
+    # 상장일: DART 구조화 항목에는 없어서, 최신 공시 원문에서 '상장예정일' 류 문구를 찾는다
+    lst_doc = None
+    if LST_BUDGET[0] > 0 and not corp.get("_have_listing"):
+        LST_BUDGET[0] -= 1
+        t2 = doc_text(corp["rcept_no"])
+        lst_doc = listing_from_doc(t2)
+        for m in re.finditer(r"상장\s*(?:예정)?\s*(?:일|기일)", t2):
+            if len(doc_hits) < 6:
+                doc_hits.append(t2[max(0, m.start() - 50): m.start() + 120])
+    if DEBUG_DUMP and len(DEBUG) < 10:
+        DEBUG.append({"name": corp["corp_name"], "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt") if k in corp},
+                      "sbd": g.get("sbd"), "pymd": g.get("pymd"), "listing_found": iso(lst_doc), "doc_hits": doc_hits})
 
     brokers = []
     for u in under:
@@ -267,7 +288,11 @@ def build_one(corp, flags_out):
         refund = pay[0] if pay else add_bd(sub[1], 2)
         if not pay:
             flags.append("환불일=청약종료+2영업일 추정")
-    listing = add_bd(refund, LISTING_GAP_BD) if refund else None
+    listing = lst_doc
+    listing_est = False
+    if listing is None and refund:
+        listing = add_bd(refund, LISTING_GAP_BD)
+        listing_est = True
 
     item = {
         "id": corp["corp_code"],
@@ -276,12 +301,10 @@ def build_one(corp, flags_out):
         "sub": [iso(sub[0]), iso(sub[1])] if sub else None,
         "refund": iso(refund),
         "listing": iso(listing),
-        "listingEst": True,
+        "listingEst": listing_est,
         "rcept_no": corp["rcept_no"],
         "flags": flags,
     }
-    if "철회" in corp.get("report_nm", ""):
-        item["withdrawn"] = True
     if "스팩" in item["name"]:
         item["spac"] = True
         if price is None and band is None:
@@ -342,6 +365,7 @@ def main():
     cands = candidates()
     for c in cands:
         c['_have_band'] = bool(old.get(c['corp_code'], {}).get('band'))
+        c['_have_listing'] = old.get(c['corp_code'], {}).get('listingEst') is False
     log(f"후보 {len(cands)}건")
     new, failed = {}, 0
     for c in cands:
@@ -350,6 +374,9 @@ def main():
         except Exception as e:
             log(f"  실패 {c['corp_name']}: {e}")
             item = None
+        if item == "WITHDRAWN":
+            old.pop(c["corp_code"], None)   # 철회된 종목은 캘린더에서 뺀다
+            continue
         if item and item.get("sub"):
             o = old.get(item["id"])
             if o and o.get("band") and "band" not in item:   # 확정 공시에는 밴드가 없으니 이전 값 유지
