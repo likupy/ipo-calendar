@@ -300,6 +300,10 @@ def build_one(corp, flags_out):
         if price is None and band is None:
             price = 2000   # 스팩 공모가는 항상 2,000원
             flags[:] = [f for f in flags if not f.startswith("가격")]
+    if band and band[0] == band[1]:
+        band = None   # 스팩 등 밴드가 하나뿐이면 밴드로 보지 않는다
+    if item.get("spac") and price is None and band is None:
+        price = 2000
     if band:
         item["band"] = band
     if price is not None:
@@ -331,7 +335,7 @@ def candidates():
         if x.get("stock_code", "").strip():
             # 이미 상장된 회사: 유상증자 등은 제외. 단, 38커뮤니케이션 공모청약 일정에 있으면 방금 상장한 공모주로 본다.
             k = name_key(x["corp_name"])
-            if not re.search(r"(?<![가-힣A-Za-z0-9])" + k + r"[가-힣]{0,8}\s*20\d\d\.\d\d\.\d\d~", T38.get("sched", "")):
+            if not re.search(r"(?<![가-힣A-Za-z0-9])" + k + r"(?:스팩|기업인수목적)?\s*20\d\d\.\d\d\.\d\d~", T38.get("sched", "")):
                 continue
         c = by.setdefault(x["corp_code"], dict(x, _confirmed=False))
         if x["rcept_no"] >= c["rcept_no"]:
@@ -378,14 +382,14 @@ def info_38(texts, name, sub_start):
     key = name_key(name)
     pre = r"(?<![가-힣A-Za-z0-9])"
     res = {"price": None, "band": None, "listing": None}
-    m = re.search(pre + key + r"[가-힣]{0,8}\s*(20\d\d)\.(\d\d)\.(\d\d)~\d\d\.\d\d\s+(\S+)\s+(\S+)", texts.get("sched", ""))
+    m = re.search(pre + key + r"(?:스팩|기업인수목적)?\s*(20\d\d)\.(\d\d)\.(\d\d)~\d\d\.\d\d\s+(\S+)\s+(\S+)", texts.get("sched", ""))
     if m and (sub_start is None or sub_start[5:7] + sub_start[8:10] == m.group(2) + m.group(3)):
         if re.fullmatch(r"[\d,]+", m.group(4)):
             res["price"] = int(m.group(4).replace(",", ""))
         b = re.fullmatch(r"([\d,]+)~([\d,]+)", m.group(5))
         if b:
             res["band"] = [int(b.group(1).replace(",", "")), int(b.group(2).replace(",", ""))]
-    m = re.search(pre + key + r"[가-힣]{0,8}\s*(20\d\d)/(\d\d)/(\d\d)", texts.get("new", ""))
+    m = re.search(pre + key + r"(?:스팩|기업인수목적)?\s*(20\d\d)/(\d\d)/(\d\d)", texts.get("new", ""))
     if m:
         try:
             res["listing"] = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
