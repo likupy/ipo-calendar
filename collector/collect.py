@@ -356,7 +356,7 @@ def probe_kind():
         try:
             req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode() if data else None, method=m,
                                          headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"})
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=12) as r:
                 body = r.read().decode("utf-8", "replace")
                 out[k] = {"status": r.status, "len": len(body), "text": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))[:2500], "html_head": body[:1500] if k == "main" else body[:3000]}
         except Exception as e:
