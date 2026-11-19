@@ -400,13 +400,5 @@
     10500
    ]
   }
- ],
- "probe": {
-  "main": {
-   "error": "HTTP Error 403: Forbidden"
-  },
-  "sub": {
-   "error": "HTTP Error 403: Forbidden"
-  }
- }
+ ]
 }

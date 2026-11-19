@@ -345,20 +345,22 @@ def probe_kind():
     """KRX KIND 공모일정 페이지가 서버에서 열리는지, 어떤 모양인지 기록한다(결과: docs/data/probe.json)."""
     out = {}
     tries = {
-        "main": ("GET", "https://kind.krx.co.kr/listinvstg/pubofrprogcom.do?method=searchPubofrProgComMain", None),
-        "sub": ("POST", "https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", {
-            "method": "searchPubofrProgComSub", "currentPageSize": "50", "pageIndex": "1",
-            "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_sub",
-            "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "",
-            "fromDate": "2026-11-01", "toDate": "2026-12-31"}),
+        "38_sched": ("GET", "http://www.38.co.kr/html/fund/index.htm?o=k", None),
+        "38_newlist": ("GET", "http://www.38.co.kr/html/fund/index.htm?o=nw", None),
+        "ipostock": ("GET", "http://www.ipostock.co.kr/sub03/ipo06.asp", None),
+        "ipostock2": ("GET", "http://www.ipostock.co.kr/sub03/ipo01.asp", None),
     }
     for k, (m, url, data) in tries.items():
         try:
             req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode() if data else None, method=m,
                                          headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"})
             with urllib.request.urlopen(req, timeout=12) as r:
-                body = r.read().decode("utf-8", "replace")
-                out[k] = {"status": r.status, "len": len(body), "text": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))[:2500], "html_head": body[:1500] if k == "main" else body[:3000]}
+                raw = r.read()
+                try:
+                    body = raw.decode("utf-8")
+                except Exception:
+                    body = raw.decode("cp949", "replace")
+                out[k] = {"status": r.status, "len": len(body), "text": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))[:1800], "hana": [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body[max(0, m.start()-300): m.start()+900]))[:900] for m in re.finditer("하나에어로", body)][:2]}
         except Exception as e:
             out[k] = {"error": str(e)}
     return out
@@ -379,7 +381,7 @@ def main():
 
     probe = None
     try:
-        probe = probe_kind() if "probe" not in old_doc else old_doc["probe"]
+        probe = probe_kind()
     except Exception as e:
         log("probe 실패", e)
     cands = candidates()
