@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-11-19T21:36",
+ "updatedAt": "2026-11-19T21:41",
  "source": "OpenDART",
  "ipos": [
   {
@@ -58,15 +58,13 @@
    "listing": "2026-11-04",
    "listingEst": false,
    "rcept_no": "20261029000155",
-   "flags": [
-    "본문에서 희망밴드 못 찾음"
-   ],
+   "flags": [],
    "spac": true,
+   "price": 2000,
    "band": [
     2000,
     2000
    ],
-   "price": 2000,
    "tone": "up"
   },
   {
