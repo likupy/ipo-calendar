@@ -340,6 +340,30 @@ def candidates():
     return list(by.values())
 
 
+# ---------------------------------------------------------------- 상장일 출처 탐색(임시)
+def probe_kind():
+    """KRX KIND 공모일정 페이지가 서버에서 열리는지, 어떤 모양인지 기록한다(결과: docs/data/probe.json)."""
+    out = {}
+    tries = {
+        "main": ("GET", "https://kind.krx.co.kr/listinvstg/pubofrprogcom.do?method=searchPubofrProgComMain", None),
+        "sub": ("POST", "https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", {
+            "method": "searchPubofrProgComSub", "currentPageSize": "50", "pageIndex": "1",
+            "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_sub",
+            "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "",
+            "fromDate": "2026-11-01", "toDate": "2026-12-31"}),
+    }
+    for k, (m, url, data) in tries.items():
+        try:
+            req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode() if data else None, method=m,
+                                         headers={"User-Agent": "Mozilla/5.0", "Referer": "https://kind.krx.co.kr/"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                body = r.read().decode("utf-8", "replace")
+                out[k] = {"status": r.status, "len": len(body), "text": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))[:2500], "html_head": body[:1500] if k == "main" else body[:3000]}
+        except Exception as e:
+            out[k] = {"error": str(e)}
+    return out
+
+
 # ---------------------------------------------------------------- 메인
 def main():
     if not os.environ.get("DART_API_KEY"):
@@ -353,6 +377,11 @@ def main():
         except Exception as e:
             log("기존 ipo.json 읽기 실패(무시):", e)
 
+    probe = None
+    try:
+        probe = probe_kind() if "probe" not in old_doc else old_doc["probe"]
+    except Exception as e:
+        log("probe 실패", e)
     cands = candidates()
     for c in cands:
         c['_have_band'] = bool(old.get(c['corp_code'], {}).get('band'))
@@ -391,13 +420,15 @@ def main():
     if not ipos and failed:
         sys.exit("수집 결과가 비어 있어 기존 파일을 덮어쓰지 않습니다.")
 
-    if old and "debug" not in old_doc and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
+    if old and "debug" not in old_doc and (probe is None or "probe" in old_doc) and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos}
     if DEBUG:
         doc["debug"] = DEBUG
+    if probe:
+        doc["probe"] = probe
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
