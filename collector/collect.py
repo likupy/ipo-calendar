@@ -19,6 +19,8 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import io
+import zipfile
 from datetime import date, datetime, timedelta, timezone
 
 API = "https://opendart.fss.or.kr/api"
@@ -59,6 +61,44 @@ def call(path, **params):
             last = e
             time.sleep(2 * (i + 1))
     raise RuntimeError(f"{path} 호출 실패: {last}")
+
+
+DEBUG = []
+DOC_BUDGET = [25]   # 한 번 실행에서 본문을 내려받는 최대 횟수
+
+
+def doc_text(rcept_no):
+    """공시 원문(zip) -> 태그 제거한 텍스트. 실패하면 ''."""
+    url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": rcept_no})
+    try:
+        with urllib.request.urlopen(url, timeout=40) as r:
+            raw = r.read()
+        z = zipfile.ZipFile(io.BytesIO(raw))
+    except Exception as e:
+        log("  원문 실패", rcept_no, e)
+        return ""
+    out = []
+    for n in z.namelist():
+        b = z.read(n)
+        for enc in ("utf-8", "cp949"):
+            try:
+                t = b.decode(enc)
+                break
+            except Exception:
+                t = ""
+        out.append(re.sub(r"<[^>]+>", " ", t))
+    return re.sub(r"\s+", " ", " ".join(out))
+
+
+BAND_RE = re.compile(r"희망\s*공모(?:가|가액|가격)[^0-9]{0,60}?([\d,]{4,9})\s*원?\s*(?:~|∼|～|-|에서)\s*([\d,]{4,9})")
+
+
+def band_from_doc(text):
+    for m in BAND_RE.finditer(text):
+        lo, hi = int(m.group(1).replace(",", "")), int(m.group(2).replace(",", ""))
+        if 100 <= lo <= hi:
+            return [lo, hi]
+    return None
 
 
 # ---------------------------------------------------------------- 영업일
@@ -197,6 +237,22 @@ def build_one(corp, flags_out):
     else:
         flags.append("가격 없음")
 
+    doc_hits = []
+    if band is None and DOC_BUDGET[0] > 0 and not corp.get("_have_band"):
+        DOC_BUDGET[0] -= 1
+        txt = doc_text(corp.get("_first") or corp["rcept_no"])
+        band = band_from_doc(txt)
+        if band is None and txt:
+            flags.append("본문에서 희망밴드 못 찾음")
+        for m in re.finditer("희망", txt):
+            if len(doc_hits) < 4:
+                doc_hits.append(txt[max(0, m.start() - 60): m.start() + 140])
+    if len(DEBUG) < 4 or any(k in corp["corp_name"] for k in ("하나에어로", "에스에프씨", "제이앤티지")):
+        if len(DEBUG) < 8:
+            DEBUG.append({"name": corp["corp_name"], "confirmed": corp.get("_confirmed"), "list_row": {k: corp[k] for k in ("report_nm", "rcept_no", "rcept_dt", "corp_cls", "stock_code") if k in corp},
+                          "estkRs": {k: (v[:6] if isinstance(v, list) else v) for k, v in r.items()},
+                          "doc_hits": doc_hits})
+
     brokers = []
     for u in under:
         if re.search(r"주관|주선", u.get("actsen", "")):
@@ -262,6 +318,7 @@ def candidates():
         c = by.setdefault(x["corp_code"], dict(x, _confirmed=False))
         if x["rcept_no"] >= c["rcept_no"]:
             c.update({k: x[k] for k in ("rcept_no", "report_nm", "rcept_dt")})
+        c["_first"] = min(c.get("_first", x["rcept_no"]), x["rcept_no"])
         if "발행조건확정" in x.get("report_nm", ""):
             c["_confirmed"] = True
     return list(by.values())
@@ -271,15 +328,18 @@ def candidates():
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
-    old = {}
+    old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
-            for p in json.load(open(OUT, encoding="utf-8")).get("ipos", []):
+            old_doc = json.load(open(OUT, encoding="utf-8"))
+            for p in old_doc.get("ipos", []):
                 old[p["id"]] = p
         except Exception as e:
             log("기존 ipo.json 읽기 실패(무시):", e)
 
     cands = candidates()
+    for c in cands:
+        c['_have_band'] = bool(old.get(c['corp_code'], {}).get('band'))
     log(f"후보 {len(cands)}건")
     new, failed = {}, 0
     for c in cands:
@@ -311,11 +371,11 @@ def main():
     if not ipos and failed:
         sys.exit("수집 결과가 비어 있어 기존 파일을 덮어쓰지 않습니다.")
 
-    if old and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]) :
+    if old and DEBUG == [] and [old[k] for k in sorted(old)] == sorted(ipos, key=lambda p: p["id"]):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos}
+    doc = {"updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "OpenDART", "ipos": ipos, "debug": DEBUG or old_doc.get("debug", [])}
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
