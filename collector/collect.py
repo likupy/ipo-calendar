@@ -299,8 +299,8 @@ def main():
                     item["band"] = m["band"]
                 if "refund" not in item and m["pay"]:
                     item["refund"] = m["pay"]
-            else:
-                flags.append("DART 공시 못 찾음")
+            elif item["sub"][1] >= (datetime.now(KST) - timedelta(days=14)).date().isoformat():
+                flags.append("DART 공시 못 찾음")   # 지난 종목은 DART 조회 기간 밖일 수 있어 표시하지 않는다
         if not item["brokers"]:
             flags.append("주관사 없음")
         if "listing" not in item:
