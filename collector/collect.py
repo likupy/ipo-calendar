@@ -130,7 +130,7 @@ def scrape_38(old):
             log("38 목록 실패", u, e)
     log(f"38 종목 번호 {len(ids)}개")
     today = datetime.now(KST).date()
-    out = []
+    out, cancelled = [], []
     for no in ids:
         o = old.get("n" + no)
         if o and o.get("listing") and o["listing"] < (today - timedelta(days=1)).isoformat():
@@ -145,11 +145,12 @@ def scrape_38(old):
             continue
         if re.search("철회|취소|연기|폐지", d["progress"]):
             log("  제외(진행상황):", d["name"], d["progress"])
+            cancelled.append(d)
             continue
         if d["sub"][1] < today - timedelta(days=WINDOW_DAYS):
             continue
         out.append(d)
-    return out
+    return out, cancelled, set(ids)
 
 
 # ---------------------------------------------------------------- OpenDART (교차 확인)
@@ -260,7 +261,7 @@ def main():
             log("기존 ipo.json 읽기 실패(무시):", e)
     before = json.dumps(old, sort_keys=True, ensure_ascii=False)
 
-    scraped = scrape_38(old)
+    scraped, cancelled, ids_seen = scrape_38(old)
     if not scraped:
         sys.exit("38커뮤니케이션에서 읽은 종목이 0개입니다. 기존 파일을 유지합니다.")
     names38 = {norm(d["name"]) for d in scraped}
@@ -308,18 +309,84 @@ def main():
         item["flags"] = flags
         merged[item["id"]] = item
 
+    # ---- 변경·신규 알림 기록 (이전 값과 비교) ----
+    now = datetime.now(KST).strftime("%Y-%m-%dT%H:%M")
+    today_iso = datetime.now(KST).date().isoformat()
+    tracking = bool(old)          # 첫 실행에는 알림을 만들지 않는다
+    changes = []
+
+    def md(x):
+        return f"{int(x[5:7])}/{int(x[8:10])}"
+
+    def rng(sub):
+        return md(sub[0]) + ("~" + md(sub[1]) if sub[1] != sub[0] else "")
+
+    def chg(tab, it, text):
+        changes.append({"t": now, "id": it["id"], "name": it["name"], "tab": tab, "text": text})
+
+    if tracking:
+        for it in merged.values():
+            o = old.get(it["id"])
+            if it["id"] not in {"n" + d["no"] for d in scraped}:
+                continue
+            if o is None:
+                if it["sub"][1] >= today_iso:
+                    chg("new", it, f"신규 등록 · 청약 {rng(it['sub'])}")
+                continue
+            if o["sub"] != it["sub"]:
+                chg("chg", it, f"청약일 {rng(o['sub'])} → {rng(it['sub'])}")
+            if o["sub"] == it["sub"] and o.get("refund") and it.get("refund") and o["refund"] != it["refund"]:
+                chg("chg", it, f"환불일 {md(o['refund'])} → {md(it['refund'])}")
+            if not o.get("listing") and it.get("listing"):
+                chg("new", it, f"상장일 확정 · {md(it['listing'])}")
+            elif o.get("listing") and it.get("listing") and o["listing"] != it["listing"]:
+                chg("chg", it, f"상장일 {md(o['listing'])} → {md(it['listing'])}")
+            elif o.get("listing") and not it.get("listing"):
+                chg("chg", it, "상장일 미정으로 바뀜")
+            if o.get("price") is None and it.get("price") is not None and not it.get("spac"):
+                chg("new", it, f"확정 공모가 {it['price']:,}원")
+
+    # ---- 철회·삭제 ----
+    for d in cancelled:
+        it = merged.pop("n" + d["no"], None)
+        if it and tracking and "n" + d["no"] in old:
+            chg("chg", it, f"철회·취소 (38 진행상황: {d['progress']})")
+    if len(ids_seen) >= 10:       # 목록을 제대로 읽었을 때만, 3회 연속 안 보이면 사라진 것으로 본다
+        for oid, p in list(merged.items()):
+            if oid in {"n" + d["no"] for d in scraped} or oid[1:] in ids_seen:
+                continue
+            if p.get("listing") and p["listing"] < today_iso:
+                continue
+            p["miss"] = p.get("miss", 0) + 1
+            if p["miss"] >= 3:
+                merged.pop(oid)
+                if tracking:
+                    chg("chg", p, "38 일정에서 사라짐 (철회·취소 가능)")
+
+    prior = old_doc.get("changes", []) if old_doc.get("v") == SCHEMA else []
+    cut_t = (datetime.now(KST) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M")
+    seen_k, allc = set(), []
+    for c in prior + changes:
+        k = (c["id"], c["text"])
+        if c["t"] >= cut_t and k not in seen_k:
+            seen_k.add(k)
+            allc.append(c)
+    allc = allc[-150:]
+
     cutoff = (datetime.now(KST) - timedelta(days=KEEP_DAYS)).date().isoformat()
     ipos = sorted([p for p in merged.values() if p["sub"][0] >= cutoff], key=lambda p: p["sub"][0])
-    if before == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False) and old_doc.get("v") == SCHEMA:
+    if before == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False) and old_doc.get("v") == SCHEMA and not changes:
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    doc = {"v": SCHEMA, "updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "38커뮤니케이션+OpenDART", "ipos": ipos}
+    doc = {"v": SCHEMA, "updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "38커뮤니케이션+OpenDART", "ipos": ipos, "changes": allc}
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
     os.replace(tmp, OUT)
-    log(f"저장 {len(ipos)}건 -> {OUT}")
+    log(f"저장 {len(ipos)}건, 새 알림 {len(changes)}건 -> {OUT}")
+    for c in changes:
+        log(f"  알림[{c['tab']}] {c['name']}: {c['text']}")
     for p in ipos:
         if p.get("flags"):
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")

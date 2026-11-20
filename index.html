@@ -17,6 +17,7 @@
   --spc-bg: #D3ECF3; --spc-fg: #083745;
   --up: #B01E13;
   --down: #1743B5;
+  --dot: #E5362B;
   --font: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -26,7 +27,7 @@
     --ref-bg: #252B34; --ref-fg: #B7BFCB;
     --lst-bg: #3B1E17; --lst-fg: #F7BCAC;
     --spc-bg: #10303A; --spc-fg: #9CD8E8;
-    --up: #FF8A7D; --down: #86B1FF;
+    --up: #FF8A7D; --down: #86B1FF; --dot: #FF6B5E;
     color-scheme: dark;
   }
 }
@@ -36,7 +37,7 @@
   --ref-bg: #252B34; --ref-fg: #B7BFCB;
   --lst-bg: #3B1E17; --lst-fg: #F7BCAC;
   --spc-bg: #10303A; --spc-fg: #9CD8E8;
-  --up: #FF8A7D; --down: #86B1FF;
+  --up: #FF8A7D; --down: #86B1FF; --dot: #FF6B5E;
   color-scheme: dark;
 }
 
@@ -145,7 +146,10 @@ html.mob body { padding-block: 22px 10px; padding-left: env(safe-area-inset-left
 html.mob #stage { width: auto !important; height: auto !important; overflow: visible; margin: 0; }
 html.mob .wrap { width: auto; transform: none !important; display: flow-root; }
 html.mob h1, html.mob .meta { display: none; }
-html.mob .top { padding: 0 10px; }
+html.mob .top { position: relative; padding: 0 10px; }
+html.mob .bell { position: absolute; right: 10px; top: 50%; margin: 0; transform: translateY(-50%); width: 28px; height: 25px; border-radius: 6px; }
+html.mob .bell svg { width: 15px; height: 15px; }
+html.mob .bell .dot { top: 3px; right: 4px; width: 7px; height: 7px; }
 html.mob .monthbar { width: 100%; justify-content: center; gap: 8px; }
 html.mob h2 { font-size: 16px; min-width: 6.4em; }
 html.mob .nav { width: 28px; height: 25px; font-size: 16px; border-radius: 6px; }
@@ -216,6 +220,25 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .kv dt { color: var(--ink-2); font-size: 13px; font-weight: 500; padding-top: 1px; }
 .kv dd { margin: 0; font-size: 14.5px; }
 .kv .big { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* alerts */
+.bell { position: relative; flex: none; width: 32px; height: 32px; margin-left: 10px; padding: 0; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; cursor: pointer; }
+.bell svg { width: 17px; height: 17px; }
+.bell .dot { position: absolute; top: 5px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 2px var(--surface); }
+:is(.bell, #notiClose, .tab, .nitem):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.noti { display: flex; flex-direction: column; max-height: min(78vh, 640px); }
+#notiClose { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; cursor: pointer; font-size: 15px; }
+.tabs { display: flex; margin: 14px 0 0; border-bottom: 1px solid var(--line); }
+.tab { flex: 1; padding: 9px 0 10px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.tdot { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--dot); vertical-align: 2px; }
+.nlist { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; }
+.nitem { display: block; width: 100%; padding: 12px 2px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); font: inherit; cursor: pointer; }
+.nitem.static { cursor: default; }
+.nitem .nt { display: block; font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.nitem.unseen .nt::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--dot); vertical-align: 1px; }
+.nitem .nn { font-size: 14.5px; font-weight: 700; }
+.nitem .nx { display: block; margin-top: 2px; font-size: 14px; }
+.nempty { padding: 30px 4px; text-align: center; color: var(--ink-2); font-size: 13.5px; }
 .kv small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -239,6 +262,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       <p class="sum" id="sum"></p>
       <span class="stamp" id="stamp"></span>
     </div>
+    <button class="bell" id="bell" type="button" aria-label="알림" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button>
   </header>
 
   <div class="tools">
@@ -272,6 +296,17 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     <button id="sheetClose" type="button" aria-label="닫기">✕</button>
   </div>
   <dl class="kv" id="sheetBody"></dl>
+</div>
+<div class="sheet noti" id="noti" role="dialog" aria-modal="true" aria-labelledby="notiTitle" hidden>
+  <div class="sheet-head">
+    <h3 id="notiTitle">알림</h3>
+    <button id="notiClose" type="button" aria-label="닫기">✕</button>
+  </div>
+  <div class="tabs" role="tablist" aria-label="알림 종류">
+    <button class="tab" type="button" role="tab" data-tab="chg" aria-selected="true">변경<i class="tdot" hidden></i></button>
+    <button class="tab" type="button" role="tab" data-tab="new" aria-selected="false">신규<i class="tdot" hidden></i></button>
+  </div>
+  <ul class="nlist" id="nlist"></ul>
 </div>
 
 <script>
@@ -584,6 +619,56 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     lastFocus = null;
   }
 
+  /* ---- alerts (bell): schedule changes / withdrawals on one tab, newly confirmed info on the other ---- */
+  const SEEN_KEY = 'ipo-noti-seen';
+  let seen = { chg: '', new: '' };
+  try { const j = JSON.parse(localStorage.getItem(SEEN_KEY) || 'null'); if (j) seen = Object.assign(seen, j); } catch (e) {}
+  function saveSeen() { try { localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch (e) {} }
+  const allChanges = () => (DATA.changes || []).slice().sort((a, b) => a.t < b.t ? 1 : -1);
+  function isUnseen(c) {
+    const s = seen[c.tab];
+    if (s) return c.t > s;
+    return Date.now() - Date.parse(c.t + ':00+09:00') < 3 * 86400000;   // first visit: the last three days count as new
+  }
+  const unseenIn = tab => allChanges().filter(c => c.tab === tab && isUnseen(c));
+  function updateBell() {
+    const has = unseenIn('chg').length + unseenIn('new').length > 0;
+    $('bell').hidden = !DATA.live;
+    $('bellDot').hidden = !has;
+    $('bell').setAttribute('aria-label', '알림' + (has ? ', 확인하지 않은 알림 있음' : ''));
+  }
+  let notiTab = 'chg';
+  function renderNoti() {
+    const fresh = unseenIn(notiTab);
+    const freshKeys = new Set(fresh.map(c => c.id + '|' + c.text));
+    document.querySelectorAll('.tab').forEach(t => {
+      const k = t.getAttribute('data-tab');
+      t.setAttribute('aria-selected', String(k === notiTab));
+      t.querySelector('.tdot').hidden = !(k !== notiTab && unseenIn(k).length);
+    });
+    const list = allChanges().filter(c => c.tab === notiTab);
+    $('nlist').innerHTML = list.length ? list.map(c => {
+      const when = Number(c.t.slice(5, 7)) + '/' + Number(c.t.slice(8, 10)) + ' ' + c.t.slice(11, 16);
+      const inner = '<span class="nt">' + esc(when) + '</span><span class="nn">' + esc(c.name) + '</span><span class="nx">' + esc(c.text) + '</span>';
+      const cls = 'nitem' + (freshKeys.has(c.id + '|' + c.text) ? ' unseen' : '');
+      return '<li>' + (byId[c.id] ? '<button type="button" class="' + cls + '" data-nid="' + esc(c.id) + '">' + inner + '</button>' : '<div class="' + cls + ' static">' + inner + '</div>') + '</li>';
+    }).join('') : '<li class="nempty">' + (notiTab === 'chg' ? '바뀐 일정이 아직 없어요.' : '새로 확정된 정보가 아직 없어요.') + '</li>';
+    if (list.length) { seen[notiTab] = list[0].t; saveSeen(); }
+    updateBell();
+  }
+  function openNoti() {
+    notiTab = 'chg';
+    renderNoti();
+    $('scrim').hidden = false;
+    $('noti').hidden = false;
+    $('notiClose').focus();
+  }
+  function closeNoti(skipFocus) {
+    $('noti').hidden = true;
+    if ($('sheet').hidden) $('scrim').hidden = true;
+    if (!skipFocus) $('bell').focus();
+  }
+
   /* ---- events ---- */
   function slide(dir) {
     const w = $('weeks');
@@ -622,9 +707,20 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   $('prev').addEventListener('click', () => shift(-1, 'r'));
   $('next').addEventListener('click', () => shift(1, 'l'));
   $('todayBtn').addEventListener('click', () => { const h = homeMonth(); state.y = h.y; state.m = h.m; render(); });
-  $('scrim').addEventListener('click', closeSheet);
+  $('scrim').addEventListener('click', () => { closeSheet(); closeNoti(true); });
+  $('bell').addEventListener('click', openNoti);
+  $('notiClose').addEventListener('click', () => closeNoti());
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { notiTab = t.getAttribute('data-tab'); renderNoti(); }));
+  $('nlist').addEventListener('click', e => {
+    const b = e.target.closest('[data-nid]');
+    if (!b) return;
+    const id = b.getAttribute('data-nid'), p = byId[id];
+    closeNoti(true);
+    if (p && p.sub) { const a = p.sub[0].split('-'); state.y = Number(a[0]); state.m = Number(a[1]); state.touched = true; render(); }
+    openSheet(id, $('bell'));
+  });
   $('sheetClose').addEventListener('click', closeSheet);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!$('noti').hidden) closeNoti(); else if (!$('sheet').hidden) closeSheet(); });
 
   /* swipe left / right to change month (phone layout only) */
   let sw = null;
@@ -636,7 +732,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   }
   document.addEventListener('touchstart', e => {
     const root = document.documentElement;
-    if (zoomed() || !root.classList.contains('mob') || e.touches.length !== 1 || !$('sheet').hidden || (e.target.closest && e.target.closest('.pills'))) { sw = null; return; }
+    if (zoomed() || !root.classList.contains('mob') || e.touches.length !== 1 || !$('sheet').hidden || !$('noti').hidden || (e.target.closest && e.target.closest('.pills'))) { sw = null; return; }
     const t = e.touches[0];
     sw = { x: t.clientX, y: t.clientY, at: Date.now() };
   }, { passive: true });
@@ -650,6 +746,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   document.addEventListener('touchcancel', () => { sw = null; }, { passive: true });
 
   render();
+  updateBell();
 
   /* Live data: the collector writes data/ipo.json next to this page. If it is missing or
      malformed (e.g. this preview), the sample data above stays on screen. */
@@ -659,7 +756,8 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(j => {
         if (!j || !Array.isArray(j.ipos) || !j.ipos.length || !j.updatedAt) return;
-        DATA = { updatedAt: j.updatedAt, ipos: j.ipos, live: true };
+        DATA = { updatedAt: j.updatedAt, ipos: j.ipos, live: true, changes: Array.isArray(j.changes) ? j.changes : [] };
+        updateBell();
         rebuild();
         const h = homeMonth();
         if (!state.touched) { state.y = h.y; state.m = h.m; }
