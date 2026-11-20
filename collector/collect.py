@@ -248,40 +248,7 @@ def match_dart(item, darts):
 
 
 # ---------------------------------------------------------------- 메인
-def probe_fee():
-    import io, zipfile
-    out = {"38": {}, "dart": {}}
-    for no in ("2362", "2345", "2343", "2353"):
-        try:
-            t = text_of(get(DETAIL.format(no)))
-            out["38"][no] = [t[max(0, m.start() - 120): m.start() + 220] for m in re.finditer("수수료", t)][:6]
-        except Exception as e:
-            out["38"][no] = str(e)
-    for rc in ("20261118000343", "20261118000136", "20261111000314"):
-        try:
-            url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": rc})
-            with urllib.request.urlopen(url, timeout=60) as r:
-                z = zipfile.ZipFile(io.BytesIO(r.read()))
-            txt = ""
-            for n in z.namelist():
-                b = z.read(n)
-                try:
-                    txt += b.decode("utf-8")
-                except Exception:
-                    txt += b.decode("cp949", "replace")
-            txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", txt))
-            out["dart"][rc] = [txt[max(0, m.start() - 150): m.start() + 250] for m in re.finditer(r"청약\s*수수료|청약수수료|위탁수수료", txt)][:5]
-        except Exception as e:
-            out["dart"][rc] = str(e)
-    return out
-
-
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):
-        d = json.load(open(OUT, encoding="utf-8"))
-        d["probe"] = probe_fee()
-        json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
