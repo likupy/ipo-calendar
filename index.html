@@ -268,9 +268,9 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   <div class="tools">
     <div class="legend" aria-label="일정 종류 켜고 끄기">
       <button type="button" class="key k-sub" data-cat="sub" aria-pressed="true"><b>청</b>청약</button>
-      <button type="button" class="key k-ref" data-cat="ref" aria-pressed="true"><b>환</b>환불</button>
       <button type="button" class="key k-lst" data-cat="lst" aria-pressed="true"><b>상</b>상장</button>
       <button type="button" class="key k-spc" data-cat="spc" aria-pressed="true"><b>청</b>스팩 청약</button>
+      <button type="button" class="key k-ref" data-cat="ref" aria-pressed="false"><b>환</b>환불</button>
     </div>
     <div class="brokers">
       <span class="lbl">증권사</span>
@@ -285,7 +285,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     </section>
   </div></div>
 
-  <p class="foot"><span id="stamp2" class="stamp2"></span><span class="f1">위 버튼으로 청약·환불·상장을 켜고 끌 수 있어요. </span>굵은 숫자는 확정 공모가(<span class="up">빨강</span> 밴드 상단 이상, <span class="down">파랑</span> 하단 이하), 옅은 숫자는 확정 전 희망 밴드예요.<br>투자 참고용 정보이며 투자 권유가 아니에요. 일정과 공모가는 정정 공시로 바뀔 수 있으니 청약 전에 DART 원문을 확인하세요.</p>
+  <p class="foot"><span id="stamp2" class="stamp2"></span><span class="f1">위 버튼으로 청약·상장·환불을 켜고 끌 수 있어요(환불은 기본 꺼짐). </span>굵은 숫자는 확정 공모가(<span class="up">빨강</span> 밴드 상단 이상, <span class="down">파랑</span> 하단 이하), 옅은 숫자는 확정 전 희망 밴드예요.<br>투자 참고용 정보이며 투자 권유가 아니에요. 일정과 공모가는 정정 공시로 바뀔 수 있으니 청약 전에 DART 원문을 확인하세요.</p>
   <div id="tail" aria-hidden="true"></div>
 </div></div>
 
@@ -387,7 +387,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const a = use.split('-').map(Number);
     return { y: a[0], m: a[1] };
   }
-  const state = Object.assign({ broker: null, visible: { sub: true, ref: true, lst: true, spc: true } }, homeMonth());
+  const state = Object.assign({ broker: null, visible: { sub: true, lst: true, spc: true, ref: false } }, homeMonth());
   let lastFocus = null;
 
   /* ---- helpers ---- */
