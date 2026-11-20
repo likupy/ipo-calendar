@@ -272,7 +272,7 @@ def probe_fee():
                 except Exception:
                     txt += b.decode("cp949", "replace")
             txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", txt))
-            out["dart"][rc] = [txt[max(0, m.start() - 200): m.start() + 250] for m in re.finditer(r"최소\s*청약|최저\s*청약|청약\s*단위|청약단위", txt)][:6]
+            out["dart"][rc] = [txt[m.start(): m.start() + 1100] for m in re.finditer(r"청약증거금률\s*】", txt)][:3] + [txt[max(0, m.start() - 100): m.start() + 300] for m in re.finditer(r"\d+\s*주\s*단위|청약단위\s*[:：]?\s*\d", txt)][:4]
         except Exception as e:
             out["dart"][rc] = str(e)
     return out
