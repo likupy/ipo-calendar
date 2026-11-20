@@ -321,6 +321,14 @@ def main():
     def rng(sub):
         return md(sub[0]) + ("~" + md(sub[1]) if sub[1] != sub[0] else "")
 
+    def orig(it):
+        t = "청약 " + rng(it["sub"])
+        if it.get("refund"):
+            t += " · 환불 " + md(it["refund"])
+        if it.get("listing"):
+            t += " · 상장 " + md(it["listing"])
+        return "철회 · 원래 일정: " + t
+
     def chg(tab, it, text):
         changes.append({"t": now, "id": it["id"], "name": it["name"], "tab": tab, "text": text})
 
@@ -350,7 +358,7 @@ def main():
     for d in cancelled:
         it = merged.pop("n" + d["no"], None)
         if it and tracking and "n" + d["no"] in old:
-            chg("chg", it, f"철회·취소 (38 진행상황: {d['progress']})")
+            chg("chg", it, orig(it))
     if len(ids_seen) >= 10:       # 목록을 제대로 읽었을 때만, 3회 연속 안 보이면 사라진 것으로 본다
         for oid, p in list(merged.items()):
             if oid in {"n" + d["no"] for d in scraped} or oid[1:] in ids_seen:
@@ -361,7 +369,7 @@ def main():
             if p["miss"] >= 3:
                 merged.pop(oid)
                 if tracking:
-                    chg("chg", p, "38 일정에서 사라짐 (철회·취소 가능)")
+                    chg("chg", p, orig(p))
 
     prior = old_doc.get("changes", []) if old_doc.get("v") == SCHEMA else []
     cut_t = (datetime.now(KST) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M")
