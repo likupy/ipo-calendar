@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  actions: read
 
 concurrency:
   group: update-ipo
@@ -36,4 +38,27 @@ jobs:
           else
             git commit -m "데이터 갱신 $(TZ=Asia/Seoul date +'%m/%d %H:%M')"
             git push
+          fi
+      - name: 복구되면 알림 이슈 닫기
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for n in $(gh issue list --state open --label "수집실패" --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "수집이 다시 정상 동작합니다. ($(TZ=Asia/Seoul date +'%m/%d %H:%M'))"
+          done
+      - name: 이틀 넘게 성공이 없으면 알림 이슈 만들기
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          last=$(gh run list --workflow update.yml --status success --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+          if [ -z "$last" ]; then age=999; else age=$(( ( $(date +%s) - $(date -d "$last" +%s) ) / 3600 )); fi
+          echo "마지막 성공 후 ${age}시간"
+          if [ "$age" -ge 48 ]; then
+            gh label create "수집실패" --color B60205 2>/dev/null || true
+            if [ -z "$(gh issue list --state open --label "수집실패" --json number --jq '.[0].number // empty')" ]; then
+              gh issue create --label "수집실패" --title "공모주 데이터 수집이 ${age}시간째 실패 중" \
+                --body "마지막 성공 이후 ${age}시간이 지났어요. Actions 탭에서 '공모주 데이터 갱신'의 최근 실행 로그를 확인해 주세요. 38커뮤니케이션 페이지 모양이 바뀌었거나 DART 키 문제일 수 있어요."
+            fi
           fi
