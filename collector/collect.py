@@ -112,11 +112,13 @@ def parse_detail(text, no):
         sb = short_broker(b.strip())
         if sb and sb not in brokers:
             brokers.append(sb)
+    mr = re.search(r"증거금율\s*:\s*(\d+)\s*%\s*청약\s*최고한도", body)
     band = [int(band.group(1).replace(",", "")), int(band.group(2).replace(",", ""))] if band else None
     if band and band[0] == band[1]:
         band = None
     return {"no": no, "name": name, "progress": progress, "sub": sub, "refund": dt("환불일"), "listing": dt("(?<!신규)상장일"),
-            "price": int(price.group(1).replace(",", "")) if price else None, "band": band, "brokers": brokers}
+            "price": int(price.group(1).replace(",", "")) if price else None, "band": band, "brokers": brokers,
+            "margin": int(mr.group(1)) if mr else None}
 
 
 def scrape_38(old):
@@ -284,6 +286,8 @@ def main():
             item["price"] = d["price"]
         if d["band"]:
             item["band"] = d["band"]
+        if d.get("margin"):
+            item["margin"] = d["margin"]
         if is_spac(d["name"]):
             item["spac"] = True
             if "price" not in item:
