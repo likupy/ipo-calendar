@@ -612,12 +612,6 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     } else {
       h += row('공모가', '정보 없음');
     }
-    if (p.margin && (p.price != null || p.band)) {
-      const m = x => fmt(Math.round(x * 10 * p.margin / 100));
-      h += row('최소 증거금', p.price != null
-        ? '<span class="big">' + m(p.price) + '원</span><small>10주 · 증거금률 ' + p.margin + '%</small>'
-        : '<span class="big">' + m(p.band[0]) + '–' + m(p.band[1]) + '원</span><small>희망 밴드 기준 · 10주 · 증거금률 ' + p.margin + '%</small>');
-    }
     h += row('청약', p.sub ? longDate(p.sub[0]) + ' ~ ' + longDate(p.sub[1]) : '이 달 일정에 없음');
     h += row('환불', p.refund ? longDate(p.refund) : '—');
     h += row('상장', p.listing ? longDate(p.listing) + (p.listingEst ? '<small>예상일 · 거래소 공지 전</small>' : '') : (p.sub ? '미정' : '—'));
