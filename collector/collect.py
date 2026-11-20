@@ -35,7 +35,7 @@ BROKER_MAP = [
     ("IBK", "IBK"), ("아이비케이", "IBK"), ("유진", "유진"), ("신영", "신영"), ("키움", "키움"),
     ("한화", "한화"), ("SK", "SK"), ("에스케이", "SK"), ("DB", "DB"), ("디비", "DB"),
     ("현대차", "현대차"), ("iM", "iM"), ("아이엠", "iM"), ("상상인", "상상인"), ("교보", "교보"),
-    ("유안타", "유안타"), ("BNK", "BNK"), ("LS", "LS"), ("메리츠", "메리츠"), ("다올", "다올"),
+    ("유안타", "유안타"), ("BNK", "BNK"), ("비엔케이", "BNK"), ("LS", "LS"), ("메리츠", "메리츠"), ("다올", "다올"),
     ("부국", "부국"), ("이베스트", "이베스트"), ("하이", "하이"), ("흥국", "흥국"), ("케이프", "케이프"),
 ]
 
@@ -233,7 +233,8 @@ def dart_items(names38):
                 if b and b not in brokers:
                     brokers.append(b)
         out.append({"name": re.sub(r"\(주\)|㈜", "", c["corp_name"]).strip(), "sub": sub, "pay": iso(pay[0]) if pay else None,
-                    "band": [min(prices), max(prices)] if len(set(prices)) >= 2 else None, "brokers": brokers, "report": c.get("report_nm", "")})
+                    "band": [min(prices), max(prices)] if len(set(prices)) >= 2 else None, "brokers": brokers, "report": c.get("report_nm", ""),
+                    "rcept": max(x.get("rcept_no", "") for x in rows_ if x["corp_code"] == c["corp_code"])})
         time.sleep(0.2)
     return out
 
@@ -250,40 +251,35 @@ def match_dart(item, darts):
 
 
 # ---------------------------------------------------------------- 메인
-def probe_fee():
+MINQ_RE = re.compile(r"[【\[]([^【】\[\]]*?)\s*(?:의\s*)?청약주식(?:수)?별\s*청약단위\s*[】\]]\s*청약주식수\s*청약단위\s*([\d,]+)\s*주\s*이상")
+
+
+def fetch_doc_text(rcept):
     import io, zipfile
-    out = {"38": {}, "dart": {}}
-    for no in ("2362", "2345"):
+    url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": rcept})
+    with urllib.request.urlopen(url, timeout=60) as r:
+        z = zipfile.ZipFile(io.BytesIO(r.read()))
+    txt = ""
+    for n in z.namelist():
+        b = z.read(n)
         try:
-            t = text_of(get(DETAIL.format(no)))
-            out["38"][no] = [t[max(0, m.start() - 150): m.start() + 150] for m in re.finditer("최저|최소", t)][:4]
-        except Exception as e:
-            out["38"][no] = str(e)
-    for rc in ("20261118000343", "20261118000136", "20261111000314"):
-        try:
-            url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": rc})
-            with urllib.request.urlopen(url, timeout=60) as r:
-                z = zipfile.ZipFile(io.BytesIO(r.read()))
-            txt = ""
-            for n in z.namelist():
-                b = z.read(n)
-                try:
-                    txt += b.decode("utf-8")
-                except Exception:
-                    txt += b.decode("cp949", "replace")
-            txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", txt))
-            out["dart"][rc] = [txt[m.start(): m.start() + 1100] for m in re.finditer(r"청약증거금률\s*】", txt)][:3] + [txt[max(0, m.start() - 100): m.start() + 300] for m in re.finditer(r"\d+\s*주\s*단위|청약단위\s*[:：]?\s*\d", txt)][:4]
-        except Exception as e:
-            out["dart"][rc] = str(e)
+            txt += b.decode("utf-8")
+        except Exception:
+            txt += b.decode("cp949", "replace")
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", txt))
+
+
+def parse_minq(txt):
+    """증권신고서 '증권사별 청약주식별 청약단위' 표의 첫 행(N주 이상) = 일반청약자 최소 청약수량. 표를 못 읽으면 비워 둔다."""
+    out = {}
+    for name, n in MINQ_RE.findall(txt):
+        b = short_broker(name.strip())
+        if b and b not in out:
+            out[b] = int(n.replace(",", ""))
     return out
 
 
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):
-        d = json.load(open(OUT, encoding="utf-8"))
-        d["probe"] = probe_fee()
-        json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
@@ -308,6 +304,7 @@ def main():
     log(f"38: {len(scraped)}종목, DART: {len(darts) if darts is not None else '실패'}건")
 
     merged = dict(old)
+    today_s = datetime.now(KST).date().isoformat()
     for d in scraped:
         item = {"id": "n" + d["no"], "name": d["name"], "brokers": list(d["brokers"]), "sub": [iso(d["sub"][0]), iso(d["sub"][1])]}
         flags = []
@@ -337,6 +334,22 @@ def main():
                     item["band"] = m["band"]
                 if "refund" not in item and m["pay"]:
                     item["refund"] = m["pay"]
+                # 증권사별 최소 청약수량(공시 표). 진행·예정 종목만, 공시가 바뀌었을 때만 다시 읽는다.
+                po = old.get(item["id"], {})
+                if item["sub"][1] >= today_s and m.get("rcept"):
+                    if po.get("minq_rc") == m["rcept"] and "minq" in po:
+                        item["minq"], item["minq_rc"] = po["minq"], po["minq_rc"]
+                    else:
+                        try:
+                            q = parse_minq(fetch_doc_text(m["rcept"]))
+                            if q:
+                                item["minq"], item["minq_rc"] = q, m["rcept"]
+                        except Exception as e:
+                            log("  공시 본문 실패", item["name"], e)
+                            if "minq" in po:
+                                item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
+                elif "minq" in po:
+                    item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
             elif item["sub"][1] >= (datetime.now(KST) - timedelta(days=14)).date().isoformat():
                 flags.append("DART 공시 못 찾음")   # 지난 종목은 DART 조회 기간 밖일 수 있어 표시하지 않는다
         if not item["brokers"]:

@@ -604,6 +604,12 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     } else {
       h += row('공모가', '정보 없음');
     }
+    if (p.margin && p.minq && (p.price != null || p.band)) {
+      const m = (x, n) => fmt(Math.round(x * n * p.margin / 100));
+      const ls = p.brokers.filter(b => p.minq[b]).map(b => '<span class="big" style="font-size:15px">' + esc(b) + ' ' + p.minq[b] + '주 · ' +
+        (p.price != null ? m(p.price, p.minq[b]) : m(p.band[0], p.minq[b]) + '–' + m(p.band[1], p.minq[b])) + '원</span>');
+      if (ls.length) h += row('최소 증거금', ls.join('<br>') + '<small>증권사별 최소 청약수량 × 공모가 × 증거금률 ' + p.margin + '%' + (p.price != null ? '' : ' · 희망 밴드 기준') + '</small>');
+    }
     h += row('청약', p.sub ? longDate(p.sub[0]) + ' ~ ' + longDate(p.sub[1]) : '이 달 일정에 없음');
     h += row('환불', p.refund ? longDate(p.refund) : '—');
     h += row('상장', p.listing ? longDate(p.listing) + (p.listingEst ? '<small>예상일 · 거래소 공지 전</small>' : '') : (p.sub ? '미정' : '—'));
