@@ -322,12 +322,7 @@ def main():
         return md(sub[0]) + ("~" + md(sub[1]) if sub[1] != sub[0] else "")
 
     def orig(it):
-        t = "청약 " + rng(it["sub"])
-        if it.get("refund"):
-            t += " · 환불 " + md(it["refund"])
-        if it.get("listing"):
-            t += " · 상장 " + md(it["listing"])
-        return "철회 · 원래 일정: " + t
+        return "철회 · 기존 일정: 청약 " + rng(it["sub"])
 
     def chg(tab, it, text):
         changes.append({"t": now, "id": it["id"], "name": it["name"], "tab": tab, "text": text})
