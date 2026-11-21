@@ -37,7 +37,10 @@ jobs:
             echo "변경 없음"
           else
             git commit -m "데이터 갱신 $(TZ=Asia/Seoul date +'%m/%d %H:%M')"
-            git push
+            for i in 1 2 3; do
+              git pull --rebase -X theirs origin main && git push && break
+              sleep 5
+            done
           fi
       - name: 최소 증거금 못 채운 종목 이슈 갱신
         if: success()

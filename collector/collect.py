@@ -461,8 +461,10 @@ def main():
             flags.append("주관사 없음")
         if "listing" not in item:
             flags.append("상장일 미정")
-        if old.get("%s" % item["id"], {}).get("minq_v"):
-            item["minq_v"] = old[item["id"]]["minq_v"]
+        po0 = old.get(item["id"], {})
+        for k in ("minq", "minq_rc", "minq_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
+            if k not in item and k in po0:
+                item[k] = po0[k]
         item["flags"] = flags
         merged[item["id"]] = item
 
