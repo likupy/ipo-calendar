@@ -233,7 +233,7 @@ def dart_items(names38):
                 if b and b not in brokers:
                     brokers.append(b)
         out.append({"name": re.sub(r"\(주\)|㈜", "", c["corp_name"]).strip(), "sub": sub, "pay": iso(pay[0]) if pay else None,
-                    "band": [min(prices), max(prices)] if len(set(prices)) >= 2 else None, "brokers": brokers, "report": c.get("report_nm", ""),
+                    "band": [min(prices), max(prices)] if len(set(prices)) >= 2 else None, "brokers": brokers, "report": c.get("report_nm", ""), "corp": c["corp_code"],
                     "rcept": max(x.get("rcept_no", "") for x in rows_ if x["corp_code"] == c["corp_code"])})
         time.sleep(0.2)
     return out
@@ -269,6 +269,25 @@ def fetch_doc_text(rcept):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", txt))
 
 
+def doc_text_any(m):
+    """최신 접수번호에 본문이 없으면(예: [첨부추가]) 같은 회사의 이전 증권신고서 본문을 차례로 시도한다."""
+    try:
+        return fetch_doc_text(m["rcept"])
+    except Exception:
+        pass
+    end = datetime.now(KST).strftime("%Y%m%d")
+    bgn = (datetime.now(KST) - timedelta(days=DART_LOOKBACK)).strftime("%Y%m%d")
+    r = call("list.json", corp_code=m["corp"], bgn_de=bgn, end_de=end, pblntf_ty="C", pblntf_detail_ty="C001", page_count=100)
+    for x in sorted(r.get("list", []) or [], key=lambda x: x.get("rcept_no", ""), reverse=True):
+        if x["rcept_no"] == m["rcept"] or "첨부추가" in x.get("report_nm", ""):
+            continue
+        try:
+            return fetch_doc_text(x["rcept_no"])
+        except Exception:
+            continue
+    raise RuntimeError("본문 없음")
+
+
 def parse_minq(txt):
     """증권신고서 '증권사별 청약주식별 청약단위' 표의 첫 행(N주 이상) = 일반청약자 최소 청약수량. 표를 못 읽으면 비워 둔다."""
     out = {}
@@ -302,12 +321,14 @@ def main():
         log("DART 조회 실패(교차확인 생략):", e)
         darts = None
     if os.path.exists(os.path.join(ROOT, "collector", "PROBE")) and darts:   # TEMP
-        pr = {"names": [d["name"] + "|" + d["rcept"] + "|" + d.get("report", "") for d in darts if "스팩" in d["name"] or "데스틴" in d["name"]]}
+        pr = {"names": [d["name"] + "|" + d["rcept"] + "|" + d.get("report", "") + "|" + str(d["sub"]) for d in darts if is_spac(d["name"]) or "우리" in d["name"]]}
         for d in darts:
-            if "데스틴" in d["name"]:
-                url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": d["rcept"]})
-                with urllib.request.urlopen(url, timeout=60) as r:
-                    pr["destin_raw"] = r.read()[:400].decode("utf-8", "replace")
+            if "우리" in d["name"] and (is_spac(d["name"]) or "인수" in d["name"]):
+                try:
+                    t = doc_text_any(d)
+                    pr["woori"] = [t[max(0, m.start() - 100): m.start() + 400] for m in re.finditer(r"청약\s*단위", t)][:5]
+                except Exception as e:
+                    pr["woori"] = str(e)
         dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = pr
         json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         return
@@ -351,7 +372,7 @@ def main():
                         item["minq"], item["minq_rc"] = po["minq"], po["minq_rc"]
                     else:
                         try:
-                            q = parse_minq(fetch_doc_text(m["rcept"]))
+                            q = parse_minq(doc_text_any(m))
                             if q:
                                 item["minq"], item["minq_rc"] = q, m["rcept"]
                         except Exception as e:
