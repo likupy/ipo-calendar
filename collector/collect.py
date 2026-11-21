@@ -251,7 +251,7 @@ def match_dart(item, darts):
 
 
 # ---------------------------------------------------------------- 메인
-MINQ_RE = re.compile(r"[【\[]([^【】\[\]]*?)\s*(?:의\s*)?청약주식(?:수)?별\s*청약단위\s*[】\]]\s*청약주식수\s*청약단위\s*([\d,]+)\s*주\s*이상")
+MINQ_RE = re.compile(r"[【\[]\s*([^【】\[\]]*?)\s*청약(?:주식(?:수)?별)?\s*단위\s*[】\]]\s*청약주식수\s*청약\s*단위\s*(?:비\s*고\s*)?([\d,]+)\s*주\s*이상")
 
 
 def fetch_doc_text(rcept):
@@ -302,15 +302,12 @@ def main():
         log("DART 조회 실패(교차확인 생략):", e)
         darts = None
     if os.path.exists(os.path.join(ROOT, "collector", "PROBE")) and darts:   # TEMP
-        pr = {}
+        pr = {"names": [d["name"] + "|" + d["rcept"] + "|" + d.get("report", "") for d in darts if "스팩" in d["name"] or "데스틴" in d["name"]]}
         for d in darts:
-            if norm(d["name"]) in ("케이엠에프", "다비오", "데스틴파워") or "우리투자스팩" in d["name"]:
-                try:
-                    t = fetch_doc_text(d["rcept"])
-                    pr[d["name"]] = {"rc": d["rcept"], "rep": d.get("report"), "len": len(t),
-                                     "hits": [t[max(0, m.start() - 80): m.start() + 380] for m in re.finditer(r"청약주식(?:수)?별\s*청약단위|청약단위\s*청약주식수|청약주식수\s*청약단위|주\s*이상\s*~", t)][:3]}
-                except Exception as e:
-                    pr[d["name"]] = str(e)
+            if "데스틴" in d["name"]:
+                url = f"{API}/document.xml?" + urllib.parse.urlencode({"crtfc_key": os.environ["DART_API_KEY"], "rcept_no": d["rcept"]})
+                with urllib.request.urlopen(url, timeout=60) as r:
+                    pr["destin_raw"] = r.read()[:400].decode("utf-8", "replace")
         dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = pr
         json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         return
