@@ -403,16 +403,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
-def probe1():   # TEMP
-    t = fetch_doc_text("20260917000365")
-    return {"len": len(t), "hits": [t[max(0, m.start() - 80): m.start() + 420] for m in re.finditer(r"청약\s*단위", t)][:6]}
-
-
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):   # TEMP
-        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = probe1()
-        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
