@@ -301,6 +301,19 @@ def main():
     except Exception as e:
         log("DART 조회 실패(교차확인 생략):", e)
         darts = None
+    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")) and darts:   # TEMP
+        pr = {}
+        for d in darts:
+            if norm(d["name"]) in ("케이엠에프", "다비오", "데스틴파워") or "우리투자스팩" in d["name"]:
+                try:
+                    t = fetch_doc_text(d["rcept"])
+                    pr[d["name"]] = {"rc": d["rcept"], "rep": d.get("report"), "len": len(t),
+                                     "hits": [t[max(0, m.start() - 80): m.start() + 380] for m in re.finditer(r"청약주식(?:수)?별\s*청약단위|청약단위\s*청약주식수|청약주식수\s*청약단위|주\s*이상\s*~", t)][:3]}
+                except Exception as e:
+                    pr[d["name"]] = str(e)
+        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = pr
+        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return
     log(f"38: {len(scraped)}종목, DART: {len(darts) if darts is not None else '실패'}건")
 
     merged = dict(old)
