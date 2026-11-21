@@ -499,6 +499,16 @@ def main():
     except Exception as e:
         log("지난 종목 보완 실패(무시):", e)
 
+    # 공시 표만으로는 확정할 수 없어 사람이 직접 확인한 값(collector/overrides.json)은 항상 우선한다
+    try:
+        ov = json.load(open(os.path.join(ROOT, "collector", "overrides.json"), encoding="utf-8"))
+        for oid, o in ov.items():
+            if oid in merged and o.get("minq"):
+                merged[oid]["minq"] = o["minq"]
+                merged[oid]["minq_v"] = MINQ_VER
+    except Exception as e:
+        log("overrides.json 읽기 실패(무시):", e)
+
     # ---- 변경·신규 알림 기록 (이전 값과 비교) ----
     now = datetime.now(KST).strftime("%Y-%m-%dT%H:%M")
     today_iso = datetime.now(KST).date().isoformat()
