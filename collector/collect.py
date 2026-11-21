@@ -446,7 +446,11 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
     except Exception as e:
         log("지난 종목 DART 목록 실패(다음에 재시도):", e)
         return
+    t0 = time.time()
     for it in cands:
+        if time.time() - t0 > 420:   # 한 번의 수집이 너무 길어지지 않게: 남은 종목은 다음 수집에서
+            log("  지난 종목 보완: 시간 제한, 나머지는 다음에")
+            break
         reps = [x for x in find_group(groups, it["name"])
                 if "첨부추가" not in x.get("report_nm", "") and x["rcept_no"][:8] <= it["sub"][0].replace("-", "")]
         reps.sort(key=lambda x: x["rcept_no"], reverse=True)
@@ -465,7 +469,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
                     it.setdefault(k, {})
                     for b, val in v.items():
                         it[k].setdefault(b, val)   # 더 최근 공시 값을 우선
-            if "minq" in it and (it.get("acct") or it.get("fee") or tried >= 3):
+            if "minq" in it and (it.get("acct") or it.get("fee") or tried >= 2) or tried >= 3:
                 break
         if not failed or "minq" in it:
             it["minq_v"] = MINQ_VER
