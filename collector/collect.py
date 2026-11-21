@@ -377,7 +377,48 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
+def probe7():   # TEMP
+    names = ["KB스팩34호", "한국스팩17호", "엘리스그룹", "SK증권스팩14호", "한화플러스스팩6호", "하나에어로다이내믹스", "엠비디"]
+    d = json.load(open(OUT, encoding="utf-8"))
+    its = {i["name"]: i for i in d["ipos"] if i["name"] in names}
+    groups, cur, end = {}, datetime(2026, 7, 1), datetime.now(KST).replace(tzinfo=None)
+    while cur < end:
+        nxt = min(cur + timedelta(days=85), end)
+        page = 1
+        while True:
+            r = call("list.json", bgn_de=cur.strftime("%Y%m%d"), end_de=nxt.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=page, page_count=100)
+            if r.get("status") != "000":
+                break
+            for x in r.get("list", []):
+                groups.setdefault(norm2(x["corp_name"]), []).append(x)
+            if page >= int(r.get("total_page", 1)):
+                break
+            page += 1
+        cur = nxt + timedelta(days=1)
+    out = {}
+    for n, it in its.items():
+        reps = sorted(groups.get(norm2(n), []), key=lambda x: x["rcept_no"], reverse=True)
+        o = {"sub": it["sub"], "brokers": it["brokers"], "reports": [x["rcept_no"] + "|" + x["report_nm"] + "|" + x["corp_name"] for x in reps],
+             "alt": [k for k in groups if norm2(n)[:3] in k][:5]}
+        for x in reps:
+            if "첨부추가" in x["report_nm"] or x["rcept_no"][:8] > it["sub"][0].replace("-", ""):
+                continue
+            try:
+                t = fetch_doc_text(x["rcept_no"])
+            except Exception as e:
+                o.setdefault("err", []).append(x["rcept_no"] + str(e)[:60]); continue
+            o["rc"] = x["rcept_no"]
+            o["hits"] = [t[max(0, m.start() - 60): m.start() + 330] for m in re.finditer(r"청약\s*단위|청약주식수", t)][:4]
+            break
+        out[n] = o
+    return out
+
+
 def main():
+    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):   # TEMP
+        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = probe7()
+        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
