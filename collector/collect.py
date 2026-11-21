@@ -307,14 +307,20 @@ ACCT_RULES = [
     (re.compile(r"청약\s*신청일\s*전일까지\s*개설"), "전일"),   # 우리투자
     (re.compile(r"청약\s*시작일\s*전일\(영업일\s*기준\)까지\s*비대면\s*개설"), "전일"),   # IBK
     (re.compile(r"청약\s*개시일\s*직전\s*영업일까지\s*개설"), "전일"),   # BNK
+    (re.compile(r"청약\s*당일\s*계좌\s*개설\s*後\s*공모주\s*온라인\s*청약만\s*가능합니다\.\s*1\)\s*비대면"), "당일"),   # 삼성
 ]
 # 청약수수료 (온라인 청약 기준, 등급 면제 전 금액). 증권사별로 표기가 달라 아는 형식만 읽는다.
 FEE_RULES = [
-    re.compile(r"On-?Line\s+((?:무료|[\d,]+원)(?:\s+(?:무료|[\d,]+원))*)\s+Off-?Line"),   # 한국투자
+    re.compile(r"On-?Line\s*(?:청약\s+)?((?:무료|[\d,]+원)(?:\s+(?:무료|[\d,]+원))*)\s+Off-?Line"),   # 한국투자·삼성
     re.compile(r"On-?Line\s*\([^)]*\)\s*([\d,]+)\s*원"),   # 우리투자
     re.compile(r"(?:HTS|MTS)[^\d]{0,40}청약\s*:\s*([\d,]+)\s*원"),   # 신영
     re.compile(r"온라인\s*\([^)]*\)\s*([\d,]+)\s*원"),   # 대신
     re.compile(r"HTS,?\s*MTS[^\d]{0,30}([\d,]+)\s*원"),   # BNK
+    re.compile(r"온라인\s*\(HTS/MTS/홈페이지/ARS\)\s*무료\s*([\d,]+)\s*원"),   # KB
+    re.compile(r"MTS,\s*HTS,\s*SMT,\s*홈페이지\s*면제\s*건당\s*([\d,]+)\s*원"),   # NH
+    re.compile(r"온라인\s+면제\s+면제\s+면제\s+[\d,]+원\s+([\d,]+)\s*원"),   # 신한 (일반 등급)
+    re.compile(r"온라인\s*청약\s*:\s*([\d,]+)\s*원"),   # 유안타
+    re.compile(r"150%\s*미해당\s*고객\s*[\d,]+원\s+([\d,]+)\s*원"),   # IBK (오프라인 다음 온라인)
 ]
 
 
@@ -477,46 +483,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
-def probe_missing():   # TEMP
-    d = json.load(open(OUT, encoding="utf-8"))
-    today = datetime.now(KST).date().isoformat()
-    want = {"NH", "KB", "신한", "유안타", "IBK", "삼성"}
-    groups, cur, end = {}, datetime.now(KST).replace(tzinfo=None) - timedelta(days=80), datetime.now(KST).replace(tzinfo=None)
-    while cur < end:
-        nxt = min(cur + timedelta(days=85), end)
-        page = 1
-        while True:
-            r = call("list.json", bgn_de=cur.strftime("%Y%m%d"), end_de=nxt.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=page, page_count=100)
-            if r.get("status") != "000":
-                break
-            for x in r.get("list", []):
-                groups.setdefault(norm2(x["corp_name"]), []).append(x)
-            if page >= int(r.get("total_page", 1)):
-                break
-            page += 1
-        cur = nxt + timedelta(days=1)
-    out, seen = {}, set()
-    for it in d["ipos"]:
-        if it["sub"][1] < today or not (set(it["brokers"]) & want - seen):
-            continue
-        reps = sorted([x for x in find_group(groups, it["name"]) if "첨부추가" not in x["report_nm"]], key=lambda x: x["rcept_no"], reverse=True)
-        for x in reps[:1]:
-            try:
-                t = fetch_doc_text(x["rcept_no"])
-            except Exception:
-                continue
-            for b, sec in broker_sections(t).items():
-                if b in want and b not in seen:
-                    seen.add(b)
-                    out[b] = {"item": it["name"], "len": len(sec), "fee": [sec[max(0, m.start() - 120): m.start() + 380] for m in re.finditer(r"수수료", sec)][:3], "acct": [sec[max(0, m.start() - 100): m.start() + 260] for m in re.finditer(r"개설|영업일", sec)][:3], "head": sec[:300]}
-    return out
-
-
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):   # TEMP
-        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = probe_missing()
-        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
