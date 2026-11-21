@@ -403,44 +403,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
-def probe_elig():   # TEMP
-    d = json.load(open(OUT, encoding="utf-8"))
-    today = datetime.now(KST).date().isoformat()
-    its = [i for i in d["ipos"] if i["sub"][1] >= today]
-    groups, cur, end = {}, datetime.now(KST).replace(tzinfo=None) - timedelta(days=80), datetime.now(KST).replace(tzinfo=None)
-    while cur < end:
-        nxt = min(cur + timedelta(days=85), end)
-        page = 1
-        while True:
-            r = call("list.json", bgn_de=cur.strftime("%Y%m%d"), end_de=nxt.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=page, page_count=100)
-            if r.get("status") != "000":
-                break
-            for x in r.get("list", []):
-                groups.setdefault(norm2(x["corp_name"]), []).append(x)
-            if page >= int(r.get("total_page", 1)):
-                break
-            page += 1
-        cur = nxt + timedelta(days=1)
-    out = {}
-    for it in its:
-        reps = sorted([x for x in find_group(groups, it["name"]) if "첨부추가" not in x["report_nm"]], key=lambda x: x["rcept_no"], reverse=True)
-        for x in reps[:2]:
-            try:
-                t = fetch_doc_text(x["rcept_no"])
-            except Exception:
-                continue
-            hits = [t[m.start(): m.start() + 520] for m in re.finditer(r"【[^【】]{0,20}청약\s*자격\s*】|\[[^\[\]]{0,20}청약\s*자격\s*\]", t)][:3]
-            if hits:
-                out[it["name"]] = {"brokers": it["brokers"], "rc": x["rcept_no"], "hits": hits}
-                break
-    return out
-
-
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):   # TEMP
-        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = probe_elig()
-        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
