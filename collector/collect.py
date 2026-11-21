@@ -378,9 +378,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
 
 
 def probe7():   # TEMP
-    names = ["KB스팩34호", "한국스팩17호", "엘리스그룹", "SK증권스팩14호", "한화플러스스팩6호", "하나에어로다이내믹스", "엠비디"]
     d = json.load(open(OUT, encoding="utf-8"))
-    its = {i["name"]: i for i in d["ipos"] if i["name"] in names}
     groups, cur, end = {}, datetime(2026, 7, 1), datetime.now(KST).replace(tzinfo=None)
     while cur < end:
         nxt = min(cur + timedelta(days=85), end)
@@ -390,27 +388,14 @@ def probe7():   # TEMP
             if r.get("status") != "000":
                 break
             for x in r.get("list", []):
-                groups.setdefault(norm2(x["corp_name"]), []).append(x)
+                groups.setdefault(x["corp_name"], []).append(x["rcept_no"] + "|" + x["report_nm"])
             if page >= int(r.get("total_page", 1)):
                 break
             page += 1
         cur = nxt + timedelta(days=1)
-    out = {}
-    for n, it in its.items():
-        reps = sorted(groups.get(norm2(n), []), key=lambda x: x["rcept_no"], reverse=True)
-        o = {"sub": it["sub"], "brokers": it["brokers"], "reports": [x["rcept_no"] + "|" + x["report_nm"] + "|" + x["corp_name"] for x in reps],
-             "alt": [k for k in groups if norm2(n)[:3] in k][:5]}
-        for x in reps:
-            if "첨부추가" in x["report_nm"] or x["rcept_no"][:8] > it["sub"][0].replace("-", ""):
-                continue
-            try:
-                t = fetch_doc_text(x["rcept_no"])
-            except Exception as e:
-                o.setdefault("err", []).append(x["rcept_no"] + str(e)[:60]); continue
-            o["rc"] = x["rcept_no"]
-            o["hits"] = [t[max(0, m.start() - 60): m.start() + 330] for m in re.finditer(r"청약\s*단위|청약주식수", t)][:4]
-            break
-        out[n] = o
+    out = {"spac": {k: v[:2] for k, v in groups.items() if re.search("스팩|기업인수|엘리스|하나에어", k)}}
+    t = fetch_doc_text("20261110000261")
+    out["mbd"] = [t[m.start(): m.start() + 900] for m in re.finditer(r"청약한도\s*및\s*청약단위", t)][:3]
     return out
 
 
