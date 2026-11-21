@@ -299,6 +299,84 @@ def parse_minq(txt):
     return out
 
 
+MINQ_VER = 2   # 최소수량 읽는 규칙을 고칠 때 올린다 -> 이미 시도한 지난 종목도 다시 시도
+
+
+def norm2(n):
+    return norm(n).replace("기업인수목적", "스팩")
+
+
+def backfill(merged, today_s, limit_m=15, limit_q=10):
+    """이미 지난 종목에 증거금률(38)·최소 청약수량(DART 공시)을 채운다. 한 번에 일부씩, 여러 번 돌며 끝낸다."""
+    n = 0
+    for it in merged.values():
+        if n >= limit_m:
+            break
+        if it.get("margin") or it.get("mchk") or not it["id"].startswith("n"):
+            continue
+        no = it["id"][1:]
+        try:
+            d = parse_detail(text_of(get(DETAIL.format(no))), no)
+        except Exception as e:
+            log("  38 증거금률 읽기 실패", it["name"], e)
+            continue
+        n += 1
+        time.sleep(0.3)
+        if d and d.get("margin"):
+            it["margin"] = d["margin"]
+        it["mchk"] = 1
+    cands = [it for it in merged.values() if "minq" not in it and it.get("minq_v") != MINQ_VER and it.get("sub") and it["sub"][1] < today_s]
+    cands.sort(key=lambda x: x["sub"][1], reverse=True)
+    cands = cands[:limit_q]
+    if not cands:
+        return
+    start = datetime.fromisoformat(min(c["sub"][0] for c in cands)) - timedelta(days=45)
+    end = datetime.now(KST).replace(tzinfo=None)
+    groups = {}
+    cur = start
+    try:
+        while cur < end:
+            nxt = min(cur + timedelta(days=85), end)
+            page = 1
+            while True:
+                r = call("list.json", bgn_de=cur.strftime("%Y%m%d"), end_de=nxt.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=page, page_count=100)
+                if r.get("status") == "013":
+                    break
+                if r.get("status") != "000":
+                    raise RuntimeError(f"list.json: {r.get('status')} {r.get('message')}")
+                for x in r.get("list", []):
+                    groups.setdefault(norm2(x["corp_name"]), []).append(x)
+                if page >= int(r.get("total_page", 1)):
+                    break
+                page += 1
+            cur = nxt + timedelta(days=1)
+    except Exception as e:
+        log("지난 종목 DART 목록 실패(다음에 재시도):", e)
+        return
+    for it in cands:
+        reps = [x for x in groups.get(norm2(it["name"]), [])
+                if "첨부추가" not in x.get("report_nm", "") and x["rcept_no"][:8] <= it["sub"][0].replace("-", "")]
+        reps.sort(key=lambda x: x["rcept_no"], reverse=True)
+        failed = False
+        for x in reps[:3]:
+            try:
+                q = parse_minq(fetch_doc_text(x["rcept_no"]))
+            except Exception as e:
+                log("  공시 본문 실패", it["name"], e)
+                failed = True
+                continue
+            if "_" in q:
+                v = q.pop("_")
+                if len(it["brokers"]) == 1:
+                    q[it["brokers"][0]] = v
+            if q:
+                it["minq"], it["minq_rc"] = q, x["rcept_no"]
+                break
+        if not failed or "minq" in it:
+            it["minq_v"] = MINQ_VER
+        log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
@@ -338,6 +416,7 @@ def main():
             item["band"] = d["band"]
         if d.get("margin"):
             item["margin"] = d["margin"]
+        item["mchk"] = 1
         if is_spac(d["name"]):
             item["spac"] = True
             if "price" not in item:
@@ -368,6 +447,8 @@ def main():
                                     q[item["brokers"][0]] = v
                             if q:
                                 item["minq"], item["minq_rc"] = q, m["rcept"]
+                            elif "minq" in po:   # 새 공시에서 표를 못 읽어도 이전 값은 지우지 않는다
+                                item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
                         except Exception as e:
                             log("  공시 본문 실패", item["name"], e)
                             if "minq" in po:
@@ -380,8 +461,15 @@ def main():
             flags.append("주관사 없음")
         if "listing" not in item:
             flags.append("상장일 미정")
+        if old.get("%s" % item["id"], {}).get("minq_v"):
+            item["minq_v"] = old[item["id"]]["minq_v"]
         item["flags"] = flags
         merged[item["id"]] = item
+
+    try:
+        backfill(merged, today_s)
+    except Exception as e:
+        log("지난 종목 보완 실패(무시):", e)
 
     # ---- 변경·신규 알림 기록 (이전 값과 비교) ----
     now = datetime.now(KST).strftime("%Y-%m-%dT%H:%M")

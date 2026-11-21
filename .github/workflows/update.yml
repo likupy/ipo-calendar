@@ -39,6 +39,11 @@ jobs:
             git commit -m "데이터 갱신 $(TZ=Asia/Seoul date +'%m/%d %H:%M')"
             git push
           fi
+      - name: 최소 증거금 못 채운 종목 이슈 갱신
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python collector/report_unread.py || true
       - name: 복구되면 알림 이슈 닫기
         if: success()
         env:
