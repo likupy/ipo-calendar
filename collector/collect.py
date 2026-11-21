@@ -247,6 +247,12 @@ def match_dart(item, darts):
         for d in darts:
             if is_spac(d["name"]) and d["sub"] and d["sub"][0] == item["sub"][0]:
                 return d
+    else:
+        k = norm(item["name"])
+        for d in darts:   # DART 에 이름이 짧게 올라온 경우(예: 하나에어로): 청약 시작일이 같을 때만 같은 종목으로 본다
+            g = norm(d["name"])
+            if d["sub"] and d["sub"][0] == item["sub"][0] and len(g) >= 3 and (k.startswith(g) or g.startswith(k)):
+                return d
     return None
 
 
@@ -299,11 +305,31 @@ def parse_minq(txt):
     return out
 
 
-MINQ_VER = 2   # 최소수량 읽는 규칙을 고칠 때 올린다 -> 이미 시도한 지난 종목도 다시 시도
+MINQ_VER = 3   # 최소수량 읽는 규칙을 고칠 때 올린다 -> 이미 시도한 지난 종목도 다시 시도
+
+
+SPAC_ALIAS = [("에스케이", "SK"), ("엔에이치", "NH"), ("케이비", "KB"), ("아이비케이", "IBK"), ("디비", "DB"), ("한국투자", "한국")]
 
 
 def norm2(n):
-    return norm(n).replace("기업인수목적", "스팩")
+    """38 과 DART 의 회사 이름 표기 차이를 줄인 비교용 키. 스팩은 '한화플러스스팩6호' = '한화플러스제6호스팩'."""
+    k = norm(n)
+    if "스팩" in k or "기업인수목적" in k:
+        for a, b in SPAC_ALIAS:
+            k = k.replace(a, b)
+        k = re.sub(r"기업인수목적|스팩|제|호", "", k)
+    return k
+
+
+def find_group(groups, name):
+    k = norm2(name)
+    if k in groups:
+        return groups[k]
+    if "스팩" not in name and "기업인수목적" not in name and len(k) >= 4:
+        for g, v in groups.items():   # DART 에는 회사 이름이 짧게(예: 하나에어로) 올라오기도 한다
+            if len(g) >= 3 and (k.startswith(g) or g.startswith(k)):
+                return v
+    return []
 
 
 def backfill(merged, today_s, limit_m=15, limit_q=10):
@@ -354,11 +380,11 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         log("지난 종목 DART 목록 실패(다음에 재시도):", e)
         return
     for it in cands:
-        reps = [x for x in groups.get(norm2(it["name"]), [])
+        reps = [x for x in find_group(groups, it["name"])
                 if "첨부추가" not in x.get("report_nm", "") and x["rcept_no"][:8] <= it["sub"][0].replace("-", "")]
         reps.sort(key=lambda x: x["rcept_no"], reverse=True)
         failed = False
-        for x in reps[:3]:
+        for x in reps[:6]:
             try:
                 q = parse_minq(fetch_doc_text(x["rcept_no"]))
             except Exception as e:
@@ -377,33 +403,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
-def probe7():   # TEMP
-    d = json.load(open(OUT, encoding="utf-8"))
-    groups, cur, end = {}, datetime(2026, 7, 1), datetime.now(KST).replace(tzinfo=None)
-    while cur < end:
-        nxt = min(cur + timedelta(days=85), end)
-        page = 1
-        while True:
-            r = call("list.json", bgn_de=cur.strftime("%Y%m%d"), end_de=nxt.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=page, page_count=100)
-            if r.get("status") != "000":
-                break
-            for x in r.get("list", []):
-                groups.setdefault(x["corp_name"], []).append(x["rcept_no"] + "|" + x["report_nm"])
-            if page >= int(r.get("total_page", 1)):
-                break
-            page += 1
-        cur = nxt + timedelta(days=1)
-    out = {"spac": {k: v[:2] for k, v in groups.items() if re.search("스팩|기업인수|엘리스|하나에어", k)}}
-    t = fetch_doc_text("20261110000261")
-    out["mbd"] = [t[m.start(): m.start() + 900] for m in re.finditer(r"청약한도\s*및\s*청약단위", t)][:3]
-    return out
-
-
 def main():
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")):   # TEMP
-        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = probe7()
-        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
     old, old_doc = {}, {}
