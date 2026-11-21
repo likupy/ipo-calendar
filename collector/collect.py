@@ -292,7 +292,7 @@ def parse_minq(txt):
     """증권신고서 '증권사별 청약주식별 청약단위' 표의 첫 행(N주 이상) = 일반청약자 최소 청약수량. 표를 못 읽으면 비워 둔다."""
     out = {}
     for name, n in MINQ_RE.findall(txt):
-        nm = re.sub(r"(?:대표주관회사|인수회사|일반청약자)\s*의?|㈜|\(주\)|의\s*$", "", name).strip()
+        nm = re.sub(r"청약주식(?:수)?별|(?:대표주관회사|인수회사|일반청약자)\s*의?|㈜|\(주\)|의\s*$", "", name).strip()
         b = short_broker(nm) if nm else "_"    # 증권사 이름 없는 표 = 대표주관회사 한 곳만 적은 공시
         if b and b not in out:
             out[b] = int(n.replace(",", ""))
