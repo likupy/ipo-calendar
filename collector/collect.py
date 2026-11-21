@@ -292,7 +292,8 @@ def parse_minq(txt):
     """증권신고서 '증권사별 청약주식별 청약단위' 표의 첫 행(N주 이상) = 일반청약자 최소 청약수량. 표를 못 읽으면 비워 둔다."""
     out = {}
     for name, n in MINQ_RE.findall(txt):
-        b = short_broker(name.strip())
+        nm = re.sub(r"(?:대표주관회사|인수회사|일반청약자)\s*의?|㈜|\(주\)|의\s*$", "", name).strip()
+        b = short_broker(nm) if nm else "_"    # 증권사 이름 없는 표 = 대표주관회사 한 곳만 적은 공시
         if b and b not in out:
             out[b] = int(n.replace(",", ""))
     return out
@@ -320,18 +321,6 @@ def main():
     except Exception as e:
         log("DART 조회 실패(교차확인 생략):", e)
         darts = None
-    if os.path.exists(os.path.join(ROOT, "collector", "PROBE")) and darts:   # TEMP
-        pr = {"names": [d["name"] + "|" + d["rcept"] + "|" + d.get("report", "") + "|" + str(d["sub"]) for d in darts if is_spac(d["name"]) or "우리" in d["name"]]}
-        for d in darts:
-            if "우리" in d["name"] and (is_spac(d["name"]) or "인수" in d["name"]):
-                try:
-                    t = doc_text_any(d)
-                    pr["woori"] = [t[max(0, m.start() - 100): m.start() + 400] for m in re.finditer(r"청약\s*단위", t)][:5]
-                except Exception as e:
-                    pr["woori"] = str(e)
-        dd = json.load(open(OUT, encoding="utf-8")); dd["probe"] = pr
-        json.dump(dd, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        return
     log(f"38: {len(scraped)}종목, DART: {len(darts) if darts is not None else '실패'}건")
 
     merged = dict(old)
@@ -373,6 +362,10 @@ def main():
                     else:
                         try:
                             q = parse_minq(doc_text_any(m))
+                            if "_" in q:
+                                v = q.pop("_")
+                                if len(item["brokers"]) == 1:
+                                    q[item["brokers"][0]] = v
                             if q:
                                 item["minq"], item["minq_rc"] = q, m["rcept"]
                         except Exception as e:
