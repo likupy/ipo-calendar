@@ -294,6 +294,73 @@ def doc_text_any(m):
     raise RuntimeError("본문 없음")
 
 
+ELIG_VER = 1   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
+
+ELIG_HDR = re.compile(r"[【\[]\s*([^【】\[\]]{0,30}?)\s*청약\s*자격\s*[】\]]")
+# 계좌개설 마감 (비대면 기준). 위에서부터 먼저 맞는 것을 쓴다.
+ACCT_RULES = [
+    (re.compile(r"(\d)\s*영업일\s*까지"), None),   # 신영: 청약 초일 직전 4영업일까지
+    (re.compile(r"비대면[^※■]{0,60}?청약\s*당일\s*계좌\s*개설\s*후\s*청약\s*가능"), "당일"),   # NH·KB·유안타
+    (re.compile(r"비대면[^※■*]{0,40}?청약일\s*종일까지"), "당일"),   # 신한
+    (re.compile(r"청약일\s*현재\s*제휴은행\s*개설"), "당일"),   # 한국투자
+    (re.compile(r"청약\s*개시일\s*현재\s*계좌\s*보유"), "당일"),   # 대신
+    (re.compile(r"청약\s*신청일\s*전일까지\s*개설"), "전일"),   # 우리투자
+    (re.compile(r"청약\s*시작일\s*전일\(영업일\s*기준\)까지\s*비대면\s*개설"), "전일"),   # IBK
+    (re.compile(r"청약\s*개시일\s*직전\s*영업일까지\s*개설"), "전일"),   # BNK
+]
+# 청약수수료 (온라인 청약 기준, 등급 면제 전 금액). 증권사별로 표기가 달라 아는 형식만 읽는다.
+FEE_RULES = [
+    re.compile(r"On-?Line\s+((?:무료|[\d,]+원)(?:\s+(?:무료|[\d,]+원))*)\s+Off-?Line"),   # 한국투자
+    re.compile(r"On-?Line\s*\([^)]*\)\s*([\d,]+)\s*원"),   # 우리투자
+    re.compile(r"(?:HTS|MTS)[^\d]{0,40}청약\s*:\s*([\d,]+)\s*원"),   # 신영
+    re.compile(r"온라인\s*\([^)]*\)\s*([\d,]+)\s*원"),   # 대신
+    re.compile(r"HTS,?\s*MTS[^\d]{0,30}([\d,]+)\s*원"),   # BNK
+]
+
+
+def broker_sections(txt):
+    hs = list(ELIG_HDR.finditer(txt))
+    out = {}
+    for i, m in enumerate(hs):
+        nm = re.sub(r"일반\s*청약자|㈜|\(주\)|의\s*$", "", m.group(1)).strip()
+        nm = re.sub(r"의$", "", nm).strip()
+        b = short_broker(nm) if nm else None
+        if not b:
+            continue
+        end = hs[i + 1].start() if i + 1 < len(hs) else m.end() + 3000
+        out.setdefault(b, txt[m.end(): min(end, m.end() + 3000)])
+    return out
+
+
+def parse_elig(txt):
+    acct, fee = {}, {}
+    for b, sec in broker_sections(txt).items():
+        for rx, label in ACCT_RULES:
+            m = rx.search(sec)
+            if m:
+                acct[b] = f"{m.group(1)}영업일 전" if label is None else label
+                break
+        for rx in FEE_RULES:
+            m = rx.search(sec)
+            if m:
+                nums = [int(n.replace(",", "")) for n in re.findall(r"([\d,]+)\s*원", m.group(1) + "원")] if "무료" in m.group(1) else [int(m.group(1).replace(",", ""))]
+                if nums and max(nums) > 0:
+                    fee[b] = max(nums)
+                    break
+    return acct, fee
+
+
+def read_doc_info(txt, brokers):
+    """공시 본문 하나에서 최소 청약수량·계좌개설·수수료를 읽는다."""
+    q = parse_minq(txt)
+    if "_" in q:
+        v = q.pop("_")
+        if len(brokers) == 1:
+            q[brokers[0]] = v
+    acct, fee = parse_elig(txt)
+    return q, acct, fee
+
+
 def parse_minq(txt):
     """증권신고서 '증권사별 청약주식별 청약단위' 표의 첫 행(N주 이상) = 일반청약자 최소 청약수량. 표를 못 읽으면 비워 둔다."""
     out = {}
@@ -332,7 +399,7 @@ def find_group(groups, name):
     return []
 
 
-def backfill(merged, today_s, limit_m=15, limit_q=10):
+def backfill(merged, today_s, limit_m=15, limit_q=14):
     """이미 지난 종목에 증거금률(38)·최소 청약수량(DART 공시)을 채운다. 한 번에 일부씩, 여러 번 돌며 끝낸다."""
     n = 0
     for it in merged.values():
@@ -351,7 +418,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
         if d and d.get("margin"):
             it["margin"] = d["margin"]
         it["mchk"] = 1
-    cands = [it for it in merged.values() if "minq" not in it and it.get("minq_v") != MINQ_VER and it.get("sub") and it["sub"][1] < today_s]
+    cands = [it for it in merged.values() if it.get("elig_v") != ELIG_VER and it.get("sub") and it["sub"][1] < today_s]
     cands.sort(key=lambda x: x["sub"][1], reverse=True)
     cands = cands[:limit_q]
     if not cands:
@@ -384,22 +451,25 @@ def backfill(merged, today_s, limit_m=15, limit_q=10):
                 if "첨부추가" not in x.get("report_nm", "") and x["rcept_no"][:8] <= it["sub"][0].replace("-", "")]
         reps.sort(key=lambda x: x["rcept_no"], reverse=True)
         failed = False
-        for x in reps[:6]:
+        for tried, x in enumerate(reps[:6], 1):
             try:
-                q = parse_minq(fetch_doc_text(x["rcept_no"]))
+                q, ac, fe = read_doc_info(fetch_doc_text(x["rcept_no"]), it["brokers"])
             except Exception as e:
                 log("  공시 본문 실패", it["name"], e)
                 failed = True
                 continue
-            if "_" in q:
-                v = q.pop("_")
-                if len(it["brokers"]) == 1:
-                    q[it["brokers"][0]] = v
-            if q:
+            if q and "minq" not in it:
                 it["minq"], it["minq_rc"] = q, x["rcept_no"]
+            for k, v in (("acct", ac), ("fee", fe)):
+                if v:
+                    it.setdefault(k, {})
+                    for b, val in v.items():
+                        it[k].setdefault(b, val)   # 더 최근 공시 값을 우선
+            if "minq" in it and (it.get("acct") or it.get("fee") or tried >= 3):
                 break
         if not failed or "minq" in it:
             it["minq_v"] = MINQ_VER
+            it["elig_v"] = ELIG_VER
         log(f"  지난 종목 최소수량: {it['name']} -> {it.get('minq')}")
 
 
@@ -462,25 +532,35 @@ def main():
                 # 증권사별 최소 청약수량(공시 표). 진행·예정 종목만, 공시가 바뀌었을 때만 다시 읽는다.
                 po = old.get(item["id"], {})
                 if item["sub"][1] >= today_s and m.get("rcept"):
-                    if po.get("minq_rc") == m["rcept"] and "minq" in po:
-                        item["minq"], item["minq_rc"] = po["minq"], po["minq_rc"]
+                    if po.get("minq_rc") == m["rcept"] and po.get("elig_v") == ELIG_VER and "minq" in po:
+                        for k in ("minq", "minq_rc", "acct", "fee", "elig_v"):
+                            if k in po:
+                                item[k] = po[k]
                     else:
                         try:
-                            q = parse_minq(doc_text_any(m))
-                            if "_" in q:
-                                v = q.pop("_")
-                                if len(item["brokers"]) == 1:
-                                    q[item["brokers"][0]] = v
+                            q, ac, fe = read_doc_info(doc_text_any(m), item["brokers"])
                             if q:
                                 item["minq"], item["minq_rc"] = q, m["rcept"]
                             elif "minq" in po:   # 새 공시에서 표를 못 읽어도 이전 값은 지우지 않는다
                                 item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
+                            if ac:
+                                item["acct"] = ac
+                            elif "acct" in po:
+                                item["acct"] = po["acct"]
+                            if fe:
+                                item["fee"] = fe
+                            elif "fee" in po:
+                                item["fee"] = po["fee"]
+                            item["elig_v"] = ELIG_VER
                         except Exception as e:
                             log("  공시 본문 실패", item["name"], e)
-                            if "minq" in po:
-                                item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
-                elif "minq" in po:
-                    item["minq"], item["minq_rc"] = po["minq"], po.get("minq_rc")
+                            for k in ("minq", "minq_rc", "acct", "fee"):
+                                if k in po:
+                                    item[k] = po[k]
+                else:
+                    for k in ("minq", "minq_rc", "acct", "fee", "elig_v"):
+                        if k in po:
+                            item[k] = po[k]
             elif item["sub"][1] >= (datetime.now(KST) - timedelta(days=14)).date().isoformat():
                 flags.append("DART 공시 못 찾음")   # 지난 종목은 DART 조회 기간 밖일 수 있어 표시하지 않는다
         if not item["brokers"]:
@@ -488,7 +568,7 @@ def main():
         if "listing" not in item:
             flags.append("상장일 미정")
         po0 = old.get(item["id"], {})
-        for k in ("minq", "minq_rc", "minq_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
+        for k in ("minq", "minq_rc", "minq_v", "acct", "fee", "elig_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
             if k not in item and k in po0:
                 item[k] = po0[k]
         item["flags"] = flags

@@ -240,6 +240,17 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .nitem .nn { font-size: 14.5px; font-weight: 700; }
 .nitem .nx { display: block; margin-top: 2px; font-size: 14px; }
 .nempty { padding: 30px 4px; text-align: center; color: var(--ink-2); font-size: 13.5px; }
+.sheet:not(.noti) { max-height: 88vh; overflow-y: auto; }
+.sec { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.sec h4 { margin: 0 0 10px; font-size: 13px; font-weight: 700; }
+.bk { margin: 0 0 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--out); }
+.bk .bn { font-size: 14.5px; font-weight: 700; margin-bottom: 8px; }
+.bk dl { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 7px 10px; margin: 0; }
+.bk dt { color: var(--ink-2); font-size: 12.5px; }
+.bk dd { margin: 0; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.bk dd b { font-size: 15px; }
+.bk dd .sh { margin-left: 6px; color: var(--ink-2); font-size: 12px; }
+.sec .note { margin: 12px 0 0; font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
 .kv small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -298,6 +309,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     <button id="sheetClose" type="button" aria-label="닫기">✕</button>
   </div>
   <dl class="kv" id="sheetBody"></dl>
+  <div id="sheetCards"></div>
 </div>
 <div class="sheet noti" id="noti" role="dialog" aria-modal="true" aria-labelledby="notiTitle" hidden>
   <div class="sheet-head">
@@ -600,7 +612,20 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     lastFocus = trigger || null;
     $('sheetTitle').innerHTML = esc(p.name) + (p.spac ? '<span class="badge">스팩</span>' : '') + (p.withdrawn ? '<span class="badge">철회신고 공시</span>' : '');
     let h = '';
-    h += row('주관사', p.brokers.length ? esc(p.brokers.join(' · ')) : '정보 없음');
+    const BN = { '미래': '미래에셋증권', '한국': '한국투자증권', 'NH': 'NH투자증권', '대신': '대신증권', '삼성': '삼성증권', 'KB': 'KB증권', '신한': '신한투자증권', '하나': '하나증권', 'IBK': 'IBK투자증권', '유진': '유진투자증권', '신영': '신영증권', '키움': '키움증권', '한화': '한화투자증권', 'SK': 'SK증권', 'DB': 'DB증권', '현대차': '현대차증권', 'iM': 'iM증권', '상상인': '상상인증권', '교보': '교보증권', '유안타': '유안타증권', 'BNK': 'BNK투자증권', 'LS': 'LS증권', '메리츠': '메리츠증권', '다올': '다올투자증권', '부국': '부국증권', '이베스트': '이베스트투자증권', '하이': '하이투자증권', '흥국': '흥국증권', '우리': '우리투자증권', '케이프': '케이프투자증권' };
+    const priced = p.price != null || p.band;
+    const mn = (x, n) => fmt(Math.round(x * n * p.margin / 100));
+    let cards = '', covered = 0;
+    p.brokers.forEach(b => {
+      let r = '';
+      if (p.margin && p.minq && p.minq[b] && priced) {
+        r += '<dt>최소 증거금</dt><dd><b>' + (p.price != null ? mn(p.price, p.minq[b]) : mn(p.band[0], p.minq[b]) + '–' + mn(p.band[1], p.minq[b])) + '원</b><span class="sh">' + p.minq[b] + '주</span></dd>';
+      }
+      if (p.acct && p.acct[b]) r += '<dt>계좌개설</dt><dd>청약 ' + esc(p.acct[b]) + '</dd>';
+      if (p.fee && p.fee[b]) r += '<dt>청약수수료</dt><dd>' + fmt(p.fee[b]) + '원</dd>';
+      if (r) { covered++; cards += '<div class="bk"><div class="bn">' + esc(BN[b] || (b + '증권')) + '</div><dl>' + r + '</dl></div>'; }
+    });
+    if (covered < p.brokers.length || !p.brokers.length) h += row('주관사', p.brokers.length ? esc(p.brokers.join(' · ')) : '정보 없음');
     if (p.price != null) {
       const pos = position(p);
       h += row('공모가', '<span class="big ' + tone(p) + '">' + fmt(p.price) + '원</span><small>확정' + (pos ? ' · ' + pos : '') + '</small>' +
@@ -610,16 +635,11 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     } else {
       h += row('공모가', '정보 없음');
     }
-    if (p.margin && p.minq && (p.price != null || p.band)) {
-      const m = (x, n) => fmt(Math.round(x * n * p.margin / 100));
-      const ls = p.brokers.filter(b => p.minq[b]).map(b => '<span class="big" style="font-size:15px">' + esc(b) + ' ' + p.minq[b] + '주 · ' +
-        (p.price != null ? m(p.price, p.minq[b]) : m(p.band[0], p.minq[b]) + '–' + m(p.band[1], p.minq[b])) + '원</span>');
-      if (ls.length) h += row('최소 증거금', ls.join('<br>') + '<small>증권사별 최소 청약수량 × 공모가 × 증거금률 ' + p.margin + '%' + (p.price != null ? '' : ' · 희망 밴드 기준') + '</small>');
-    }
     h += row('청약', p.sub ? longDate(p.sub[0]) + ' ~ ' + longDate(p.sub[1]) : '이 달 일정에 없음');
     h += row('환불', p.refund ? longDate(p.refund) : '—');
     h += row('상장', p.listing ? longDate(p.listing) + (p.listingEst ? '<small>예상일 · 거래소 공지 전</small>' : '') : (p.sub ? '미정' : '—'));
     $('sheetBody').innerHTML = h;
+    $('sheetCards').innerHTML = cards ? '<div class="sec"><h4>증권사별 청약 정보</h4>' + cards + '<p class="note">계좌개설은 비대면, 수수료는 온라인 청약 기준이에요. 수수료는 등급별로 면제될 수 있어요. 공시 기준 참고용이라 청약 전 증권사 앱에서 확인하세요.</p></div>' : '';
     $('scrim').hidden = false;
     $('sheet').hidden = false;
     $('sheetClose').focus();
