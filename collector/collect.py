@@ -494,33 +494,9 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
-def probe_two():
-    out = {}
-    t = text_of(get(DETAIL.format("2352")))
-    k0 = t.find("4.공모후 유통가능")
-    seg = t[k0: k0 + 6000]
-    m = re.search(r"합\s*계[^가-힣]{0,200}", seg[200:]) 
-    out["seg_tail"] = [seg[mm.start() - 60: mm.start() + 220] for mm in re.finditer(r"합\s*계", seg)][-3:]
-    names = set()
-    corp = None
-    for pg in range(1, 16):
-        r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", page_count=100, page_no=pg)
-        for x in (r.get("list") or []):
-            if "케이엠에프" in x.get("corp_name", ""):
-                corp = x["corp_code"]
-        if corp or pg >= int(r.get("total_page", 1) or 1): break
-    out["corp"] = corp
-    if corp:
-        r = call("list.json", corp_code=corp, bgn_de="20261001", end_de="20261122", page_count=100)
-        out["list"] = [(x["report_nm"], x["rcept_no"], x["rcept_dt"]) for x in (r.get("list") or [])]
-    return out
-
-
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
-    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
-        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_two(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
