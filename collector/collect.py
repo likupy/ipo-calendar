@@ -496,14 +496,15 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 def probe_two():
     out = {}
-    for no in ("2352", "2340"):
-        t = text_of(get(DETAIL.format(no)))
-        k = t.find("공모후 합계")
-        k0 = t.find("4.공모후 유통가능")
-        out[no] = {"tail": t[k - 100: k + 260] if k >= 0 else "표 없음", "has": k0 >= 0}
+    t = text_of(get(DETAIL.format("2352")))
+    k0 = t.find("4.공모후 유통가능")
+    seg = t[k0: k0 + 6000]
+    m = re.search(r"합\s*계[^가-힣]{0,200}", seg[200:]) 
+    out["seg_tail"] = [seg[mm.start() - 60: mm.start() + 220] for mm in re.finditer(r"합\s*계", seg)][-3:]
+    names = set()
     corp = None
-    for pg in range(1, 8):
-        r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100, page_no=pg)
+    for pg in range(1, 16):
+        r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", page_count=100, page_no=pg)
         for x in (r.get("list") or []):
             if "케이엠에프" in x.get("corp_name", ""):
                 corp = x["corp_code"]
