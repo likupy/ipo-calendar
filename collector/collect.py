@@ -494,9 +494,35 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
+def probe_two():
+    out = {}
+    for no in ("2352", "2340"):
+        t = text_of(get(DETAIL.format(no)))
+        k = t.find("희망공모가액")
+        o = {"head": t[k - 200: k + 900]}
+        k2 = t.find("수요예측결과")
+        o["dem"] = t[k2: k2 + 1500] if k2 >= 0 else "수요예측결과 없음"
+        o["comp"] = [t[max(0, m.start() - 80): m.start() + 200] for m in re.finditer(r"경쟁률", t)][:6]
+        out[no] = o
+    corp = None
+    for pg in range(1, 8):
+        r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100, page_no=pg)
+        for x in (r.get("list") or []):
+            if "유캐스트" in x.get("corp_name", ""):
+                corp = x["corp_code"]
+        if corp or pg >= int(r.get("total_page", 1) or 1): break
+    out["corp"] = corp
+    if corp:
+        r = call("list.json", corp_code=corp, bgn_de="20261001", end_de="20261122", page_count=100)
+        out["list"] = [(x["report_nm"], x["rcept_no"]) for x in (r.get("list") or [])]
+    return out
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_two(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
