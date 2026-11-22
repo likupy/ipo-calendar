@@ -28,6 +28,7 @@ jobs:
       - name: DART 수집
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: python collector/collect.py
       - name: 바뀐 게 있으면 저장
         run: |

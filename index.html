@@ -253,6 +253,44 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .sec .note { margin: 12px 0 0; font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
 .kv small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
+/* 새 상세창 (일부 종목) */
+.xph { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.xph .k { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+.xph .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.xph .v.none { font-size: 15px; color: var(--ink-2); font-weight: 600; }
+.xex { margin: 4px 0 0; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.xtl { margin: 16px 0 0 8px; padding-left: 20px; border-left: 2px solid var(--line); }
+.xst { position: relative; padding-bottom: 16px; }
+.xst:last-child { padding-bottom: 0; }
+.xst::before { content: ''; position: absolute; left: -27px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink-2); }
+.xst.on::before { background: var(--down); border-color: var(--down); }
+.xst.wait::before { border-style: dashed; opacity: .6; }
+.xst .h { font-size: 13px; font-weight: 700; }
+.xst .h small { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--ink-2); }
+.xst .w { margin-top: 6px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.xm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; margin-top: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.xm div:nth-child(odd) { color: var(--ink-2); }
+.xm div:nth-child(even) { text-align: right; font-weight: 700; }
+.xm .nw { color: var(--down); }
+.xfin { margin-top: 16px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; }
+.xfin .t { font-size: 13px; font-weight: 700; }
+.xfin .w { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.xfin table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.xfin th { padding: 0 0 5px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: right; }
+.xfin th:first-child { text-align: left; }
+.xfin td { padding: 8px 0; border-top: 1px solid var(--line); text-align: right; font-weight: 700; }
+.xfin td:first-child { text-align: left; font-weight: 500; }
+.xchips { display: flex; flex-wrap: wrap; gap: 7px; }
+.xchip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 99px; font-size: 12.5px; font-weight: 600; color: var(--ink); text-decoration: none; }
+.xchip i { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--today); color: var(--ink-2); }
+.xsub { margin: 16px 0 8px; font-size: 12.5px; font-weight: 700; }
+.xyts { display: flex; gap: 10px; overflow-x: auto; margin-right: -18px; padding-right: 18px; padding-bottom: 4px; }
+.xyc { flex: none; width: 200px; color: inherit; text-decoration: none; }
+.xth { position: relative; height: 112px; border-radius: 10px; background: #2B3340 center / cover no-repeat; display: grid; place-items: center; overflow: hidden; }
+.xth .pl { width: 40px; height: 28px; border-radius: 8px; background: #E5362B; color: #fff; display: grid; place-items: center; font-size: 12px; }
+.xyc b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 7px; font-size: 12.5px; line-height: 1.35; font-weight: 600; }
+.xyc span { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ink-2); }
+
 @media (prefers-reduced-motion: no-preference) {
   .scrim { animation: fade .15s ease-out; }
   .sheet { animation: rise .18s ease-out; }
@@ -310,6 +348,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   </div>
   <dl class="kv" id="sheetBody"></dl>
   <div id="sheetCards"></div>
+  <div id="sheetExt"></div>
 </div>
 <div class="sheet noti" id="noti" role="dialog" aria-modal="true" aria-labelledby="notiTitle" hidden>
   <div class="sheet-head">
@@ -604,6 +643,81 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     if (y0) window.scrollTo(0, y0);
   }
 
+
+  /* ---- 새 상세창(일부 종목): 공모 지표 · 최종 경쟁률 · 관련 링크 ---- */
+  function extHtml(p, BN) {
+    const e = p.ext;
+    if (!e) return '';
+    const md = s => { const q = parts(ts(s)); return q.m + '/' + q.d; };
+    const f2 = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const eok = n => fmt(Math.round(n / 1e8)) + '억';
+    const ended = p.sub && ts(p.sub[1]) < kstToday();
+    const hasDem = e.comp != null && p.price != null;
+    const calc = e.inst && e.free && p.price != null;
+    let h = '<div class="sec"><h4>공모 지표</h4>';
+    if (hasDem) {
+      h += '<div class="xph"><span class="k">기관 수요예측 경쟁률</span><span class="v">' + f2(e.comp) + ' : 1</span></div>' +
+        '<p class="xex">기관 투자자 신청이 공모 물량의 약 ' + fmt(Math.round(e.comp)) + '배였어요.</p>';
+    } else {
+      h += '<div class="xph"><span class="k">기관 수요예측 경쟁률</span><span class="v none">결과 대기</span></div>' +
+        '<p class="xex">' + (e.dem_dates ? '수요예측(' + md(e.dem_dates[0]) + '~' + md(e.dem_dates[1]) + ') 결과가 공시되면 표시돼요.' : '수요예측 결과가 공시되면 표시돼요.') + '</p>';
+    }
+    h += '<div class="xtl">';
+    if (hasDem && e.lock_pct != null) {
+      let rows = '<div>의무보유 확약 비율</div><div>' + f2(e.lock_pct) + '%</div>';
+      if (calc && e.apply_qty && e.lock_qty != null) rows += '<div>유통가능금액</div><div>' + eok((e.free - e.inst * e.lock_qty / e.apply_qty) * p.price) + '</div>';
+      h += '<div class="xst"><div class="h">수요예측 후</div><div class="xm">' + rows + '</div></div>';
+    } else {
+      h += '<div class="xst wait"><div class="h">수요예측 후</div><div class="w">의무보유 확약 비율과 유통가능금액이 표시돼요.</div></div>';
+    }
+    const f = e.fin;
+    if (f && f.inst && f.unlock != null) {
+      let rows = '<div>의무보유 확약 비율</div><div class="nw">' + f2((f.inst - f.unlock) / f.inst * 100) + '%</div>';
+      if (calc) rows += '<div>유통가능금액</div><div class="nw">' + eok((e.free - (f.inst - f.unlock)) * p.price) + '</div>';
+      const rc = e.dart && e.dart['실적'] ? e.dart['실적'] : '';
+      h += '<div class="xst on"><div class="h">배정 후' + (rc ? '<small>' + md(rc.slice(0, 4) + '-' + rc.slice(4, 6) + '-' + rc.slice(6, 8)) + ' 반영</small>' : '') + '</div><div class="xm">' + rows + '</div></div>';
+    } else {
+      h += '<div class="xst wait"><div class="h">배정 후</div><div class="w">' + (p.refund ? '배정 공고일(' + md(p.refund) + ') 이후 표시돼요.' : '배정 결과가 공시되면 표시돼요.') + '</div></div>';
+    }
+    h += '</div>';
+    if (hasDem) h += '<p class="xex" style="margin-top:12px"><b>확약</b>은 기관이 일정 기간 팔지 않겠다고 약속한 것이에요. <b>유통가능금액</b>은 상장 직후 시장에서 거래될 수 있는 주식의 금액이에요.</p>';
+    /* 최종 경쟁률 */
+    h += '<div class="xfin"><div class="t">최종 경쟁률</div>';
+    if (f && f.n_fin && f.req != null && f.gen && f.eq && f.pr && p.brokers.length === 1 && p.margin && p.price != null) {
+      const b = p.brokers[0], nm = BN[b] || (b + '증권');
+      if (f.req < f.gen) {
+        h += '<div class="w">일반청약이 미달이었어요. 청약한 수량이 전부 배정돼요.</div>';
+      } else {
+        const per = Math.round(+(f.req / f.pr).toFixed(2) * p.price * p.margin / 100);
+        h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr><tr><td>' + esc(nm) + '</td><td>' + f2(f.eq / f.n_fin) + '주</td><td>' + fmt(per) + '원</td></tr></table>' +
+          '<p class="xex" style="margin-top:8px">균등배정은 균등 물량을 청약 건수로 나눈 평균이에요. 비례배정은 1주를 받으려면 필요한 청약 증거금이에요.</p>';
+      }
+    } else if (f) {
+      h += '<div class="w">증권사별 결과는 공시를 확인한 뒤 표시돼요.</div>';
+    } else if (ended) {
+      h += '<div class="w">청약이 끝났어요. 배정 결과가 공시되면' + (p.refund ? '(' + md(p.refund) + ')' : '') + ' 표시돼요.</div>';
+    } else {
+      h += '<div class="w">청약(' + md(p.sub[0]) + '~' + md(p.sub[1]) + ')이 끝나고 배정 결과가 공시되면 표시돼요.</div>';
+    }
+    h += '</div><p class="note">공시 기준 참고용이에요. 유통가능금액은 계산한 값이에요.</p></div>';
+    /* 관련 링크 */
+    const no = String(p.id).replace(/^n/, '');
+    const d = e.dart || {};
+    const dl = rc => 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=' + rc;
+    let l = '<a class="xchip" href="http://www.38.co.kr/html/fund/?o=v&amp;no=' + esc(no) + '" target="_blank" rel="noopener noreferrer"><i>38</i>종목 정보 ↗</a>';
+    if (d['신고서']) l += '<a class="xchip" href="' + dl(d['신고서']) + '" target="_blank" rel="noopener noreferrer"><i>DART</i>증권신고서 ↗</a>';
+    if (d['설명서']) l += '<a class="xchip" href="' + dl(d['설명서']) + '" target="_blank" rel="noopener noreferrer"><i>DART</i>투자설명서 ↗</a>';
+    if (d['실적']) l += '<a class="xchip" href="' + dl(d['실적']) + '" target="_blank" rel="noopener noreferrer"><i>DART</i>실적보고서 ↗</a>';
+    h += '<div class="sec"><h4>관련 링크</h4><div class="xchips">' + l + '</div><div class="xsub">영상</div>';
+    if (e.yt && e.yt.length) {
+      h += '<div class="xyts">' + e.yt.map(v => '<a class="xyc" href="https://www.youtube.com/watch?v=' + esc(v.id) + '" target="_blank" rel="noopener noreferrer">' +
+        '<div class="xth" style="background-image:url(https://i.ytimg.com/vi/' + esc(v.id) + '/mqdefault.jpg)"><div class="pl">▶</div></div><b>' + esc(v.t) + '</b><span>공모주투자의법칙' + (v.p ? ' · ' + md(v.p) : '') + '</span></a>').join('') + '</div>';
+    } else {
+      h += '<p class="xex">채널에서 이 종목 이름이 제목에 들어간 영상을 아직 못 찾았어요.</p>';
+    }
+    return h + '</div>';
+  }
+
   /* ---- detail sheet ---- */
   function row(dt, dd) { return '<dt>' + dt + '</dt><dd>' + dd + '</dd>'; }
   function openSheet(id, trigger) {
@@ -618,6 +732,10 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     let cards = '', covered = 0;
     p.brokers.forEach(b => {
       let r = '';
+      if (p.ext && p.ext.alloc && p.ext.alloc[b] != null) {
+        const tot = Object.values(p.ext.alloc).reduce((a, c) => a + c, 0);
+        r += '<dt>배정 수량</dt><dd><b>' + fmt(p.ext.alloc[b]) + '주</b>' + (Object.keys(p.ext.alloc).length > 1 ? '<span class="sh">' + Math.round(p.ext.alloc[b] / tot * 100) + '%</span>' : '') + '</dd>';
+      }
       if (p.margin && p.minq && p.minq[b] && priced) {
         r += '<dt>최소 증거금</dt><dd><b>' + (p.price != null ? mn(p.price, p.minq[b]) : mn(p.band[0], p.minq[b]) + '–' + mn(p.band[1], p.minq[b])) + '원</b><span class="sh">' + p.minq[b] + '주</span></dd>';
       }
@@ -640,6 +758,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     h += row('상장', p.listing ? longDate(p.listing) + (p.listingEst ? '<small>예상일 · 거래소 공지 전</small>' : '') : (p.sub ? '미정' : '—'));
     $('sheetBody').innerHTML = h;
     $('sheetCards').innerHTML = cards ? '<div class="sec"><h4>증권사별 청약 정보</h4>' + cards + '<p class="note">계좌개설은 비대면, 수수료는 온라인 청약 기준이에요. 수수료는 등급별로 면제될 수 있어요. 공시 기준 참고용이라 청약 전 증권사 앱에서 확인하세요.</p></div>' : '';
+    $('sheetExt').innerHTML = extHtml(p, BN);
     $('scrim').hidden = false;
     $('sheet').hidden = false;
     $('sheetClose').focus();

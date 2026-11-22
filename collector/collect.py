@@ -494,6 +494,181 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
+# ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
+EXT_IDS = {"n2352", "n2334", "n2340"}   # 유캐스트, 하나에어로다이내믹스, 케이엠에프
+YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
+
+
+def num(s):
+    return int(s.replace(",", ""))
+
+
+def parse_ext38(t, brokers):
+    """38 상세 페이지에서 수요예측 결과·배정 수량·유통가능 물량을 읽는다. 읽은 것만 돌려준다(추정 없음)."""
+    e = {}
+    m = re.search(r"수요예측일\s*(\d{4})\.(\d\d)\.(\d\d)\s*~\s*(\d{4})\.(\d\d)\.(\d\d)", t)
+    if m:
+        e["dem_dates"] = [iso(to_date(*m.groups()[:3])), iso(to_date(*m.groups()[3:]))]
+    m = re.search(r"기관경쟁률\s*([\d,]+(?:\.\d+)?)\s*:\s*1", t)
+    if m:
+        e["comp"] = float(m.group(1).replace(",", ""))
+    m = re.search(r"구분\s*신청수량\(단위:주\)(.*?)합계\s*([\d,]+)\s*총\s*수량\s*대비\s*비율\(%\)\s*([\d.]+)\s*%", t)
+    if m:
+        e["lock_qty"], e["lock_pct"] = num(m.group(2)), float(m.group(3))
+    m = re.search(r"합계\s*([\d,]+)\s*건\s*([\d,]+)\s*주\s*100\s*%", t)
+    if m:
+        e["apply_qty"] = num(m.group(2))
+    m = re.search(r"기관투자자등\s*([\d,]+)\s*주\s*\(", t)
+    if m:
+        e["inst"] = num(m.group(1))
+    m = re.search(r"주간사\s+.+?\s+주식수\s*:\s*([\d,]+)\s*주\s*/\s*청약한도", t)
+    gen = num(m.group(1)) if m else None
+    al = {}
+    seg = re.search(r"인수회사\s*주식수\s*청약한도\s*기타\s*(.+?)\s*주요일정", t)
+    if seg:
+        for nm, q in re.findall(r"([가-힣A-Za-z]*(?:증권|은행|금융투자)(?:㈜)?)\s+([\d,]+)\s*주", seg.group(1)):
+            b = short_broker(nm)
+            if b:
+                al[b] = al.get(b, 0) + num(q)
+    if not (gen and al and sum(al.values()) == gen):
+        al = {brokers[0]: gen} if gen and len(brokers) == 1 else {}
+    if al:
+        e["alloc"] = al
+    m = re.search(r"합\s*계\s*([\d,]+)\s*100\.00\s*%\s*([\d,]+)\s*100\.00\s*%\s*([\d,]+)\s*([\d.]+)\s*%\s*([\d,]+)\s*([\d.]+)\s*%", t)
+    if m:
+        e["tot"], e["free"] = num(m.group(2)), num(m.group(5))
+    return e
+
+
+def parse_report(t):
+    """증권발행실적보고서: 기관 배정 중 미확약 수량, 일반청약 결과(청약 건수·수량, 균등/비례 물량)."""
+    f = {}
+    m = re.search(r"미확약\s+([\d,.\- ]+?)\s+계\s+([\d,.\- ]+)", t)
+    if m:
+        a = re.findall(r"[\d,]+(?:\.\d+)?", m.group(1))
+        b = re.findall(r"[\d,]+(?:\.\d+)?", m.group(2))
+        if "100.00" in b and b.index("100.00") >= 1 and len(a) >= 2:
+            f["inst"], f["unlock"] = num(b[b.index("100.00") - 1]), num(a[-2])
+    m = re.search(r"일반투자자\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)", t)
+    if m:
+        f["gen"], f["n"], f["req"], f["n_fin"], f["got"] = num(m.group(1)), num(m.group(2)), num(m.group(3)), num(m.group(5)), num(m.group(6))
+    m = re.search(r"균등방식\s+([\d,]+)\s+[\d.]+\s+일괄청약방식\s+비례방식\s+([\d,]+)", t)
+    if m:
+        f["eq"], f["pr"] = num(m.group(1)), num(m.group(2))
+    return f if "unlock" in f else {}
+
+
+def find_corp(name, sub0):
+    end = sub0
+    bgn = sub0 - timedelta(days=75)
+    k = norm(name)
+    for pg in range(1, 12):
+        r = call("list.json", bgn_de=bgn.strftime("%Y%m%d"), end_de=end.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=pg, page_count=100)
+        for x in r.get("list", []) or []:
+            g = norm(x.get("corp_name", ""))
+            if g == k or (len(g) >= 3 and (k.startswith(g) or g.startswith(k))):
+                return x["corp_code"]
+        if r.get("status") != "000" or pg >= int(r.get("total_page", 1) or 1):
+            break
+    return None
+
+
+def dart_reports(corp, sub0):
+    end = datetime.now(KST).strftime("%Y%m%d")
+    bgn = (sub0 - timedelta(days=100)).strftime("%Y%m%d")
+    r = call("list.json", corp_code=corp, bgn_de=bgn, end_de=end, page_count=100)
+    out = {}
+    for x in sorted(r.get("list", []) or [], key=lambda x: x.get("rcept_no", "")):
+        nm = x.get("report_nm", "")
+        if "발행실적보고서" in nm:
+            out["실적"] = x["rcept_no"]
+        elif "투자설명서" in nm:
+            out["설명서"] = x["rcept_no"]
+        elif "증권신고서" in nm and not re.search(r"효력|제출요구|철회", nm):
+            out["신고서"] = x["rcept_no"]
+    return out
+
+
+def yt_videos():
+    """공모주투자의법칙 채널의 영상 제목 목록. YT_API_KEY 가 있으면 최근 수백 개, 없으면 RSS(최근 15개)."""
+    key = os.environ.get("YT_API_KEY", "").strip()
+    vids = []
+    if key:
+        try:
+            tok = ""
+            for _ in range(6):
+                u = "https://www.googleapis.com/youtube/v3/playlistItems?" + urllib.parse.urlencode(
+                    {"part": "snippet", "maxResults": 50, "playlistId": "UU" + YT_CHANNEL[2:], "key": key, "pageToken": tok})
+                j = json.loads(get(u, timeout=30))
+                for it in j.get("items", []):
+                    sn = it.get("snippet", {})
+                    vids.append({"id": sn.get("resourceId", {}).get("videoId"), "t": sn.get("title", ""), "p": (sn.get("publishedAt") or "")[:10]})
+                tok = j.get("nextPageToken", "")
+                if not tok:
+                    break
+            if vids:
+                return vids
+        except Exception as ex:
+            log("  YouTube API 실패, RSS 로 대체:", ex)
+    x = get("https://www.youtube.com/feeds/videos.xml?channel_id=" + YT_CHANNEL, timeout=30)
+    for en in re.findall(r"<entry>(.*?)</entry>", x, re.S):
+        i = re.search(r"<yt:videoId>([^<]+)</yt:videoId>", en)
+        t = re.search(r"<title>([^<]*)</title>", en)
+        d = re.search(r"<published>(\d{4}-\d\d-\d\d)", en)
+        if i and t:
+            vids.append({"id": i.group(1), "t": re.sub(r"&amp;", "&", re.sub(r"&#39;|&apos;", "'", t.group(1))), "p": d.group(1) if d else ""})
+    return vids
+
+
+def yt_key(s):
+    return re.sub(r"[\s\[\]()\-_·,.!?'\"~]", "", s or "")
+
+
+def enrich(merged, old, alias):
+    vids = None
+    for iid in sorted(EXT_IDS):
+        it = merged.get(iid)
+        if not it:
+            continue
+        e = dict((old.get(iid) or {}).get("ext", {}))
+        sub0 = date.fromisoformat(it["sub"][0])
+        try:
+            x = parse_ext38(text_of(get(DETAIL.format(iid[1:]))), it["brokers"])
+            e.update(x)
+        except Exception as ex:
+            log("  38 확장 실패", it["name"], ex)
+        try:
+            if not e.get("corp"):
+                c = find_corp(it["name"], sub0)
+                if c:
+                    e["corp"] = c
+            if e.get("corp"):
+                reps = dart_reports(e["corp"], sub0)
+                if reps:
+                    e["dart"] = reps
+                if reps.get("실적") and e.get("fin_rc") != reps["실적"]:
+                    f = parse_report(fetch_doc_text(reps["실적"]))
+                    if f:
+                        e["fin"], e["fin_rc"] = f, reps["실적"]
+                    else:
+                        log("  실적보고서 표를 못 읽음", it["name"], reps["실적"])
+        except Exception as ex:
+            log("  DART 확장 실패", it["name"], ex)
+        try:
+            if vids is None:
+                vids = yt_videos()
+                log(f"  YouTube 영상 {len(vids)}개 읽음")
+            keys = [yt_key(it["name"])] + [yt_key(a) for a in alias.get(iid, [])]
+            hit = {v["id"]: v for v in e.get("yt", [])}
+            for v in vids:
+                if v.get("id") and any(k and k in yt_key(v["t"]) for k in keys):
+                    hit[v["id"]] = v
+            e["yt"] = sorted(hit.values(), key=lambda v: v.get("p", ""), reverse=True)[:4]
+        except Exception as ex:
+            log("  YouTube 실패", ex)
+        it["ext"] = e
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
@@ -599,6 +774,15 @@ def main():
         backfill(merged, today_s)
     except Exception as e:
         log("지난 종목 보완 실패(무시):", e)
+
+    try:
+        ov0 = json.load(open(os.path.join(ROOT, "collector", "overrides.json"), encoding="utf-8"))
+    except Exception:
+        ov0 = {}
+    try:
+        enrich(merged, old, {k: v.get("alias", []) for k, v in ov0.items()})
+    except Exception as e:
+        log("상세 확장 실패(무시):", e)
 
     # 공시 표만으로는 확정할 수 없어 사람이 직접 확인한 값(collector/overrides.json)은 항상 우선한다
     try:
