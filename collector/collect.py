@@ -498,23 +498,20 @@ def probe_two():
     out = {}
     for no in ("2352", "2340"):
         t = text_of(get(DETAIL.format(no)))
-        k = t.find("희망공모가액")
-        o = {"head": t[k - 200: k + 900]}
-        k2 = t.find("수요예측결과")
-        o["dem"] = t[k2: k2 + 1500] if k2 >= 0 else "수요예측결과 없음"
-        o["comp"] = [t[max(0, m.start() - 80): m.start() + 200] for m in re.finditer(r"경쟁률", t)][:6]
-        out[no] = o
+        k = t.find("공모후 합계")
+        k0 = t.find("4.공모후 유통가능")
+        out[no] = {"tail": t[k - 100: k + 260] if k >= 0 else "표 없음", "has": k0 >= 0}
     corp = None
     for pg in range(1, 8):
         r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100, page_no=pg)
         for x in (r.get("list") or []):
-            if "유캐스트" in x.get("corp_name", ""):
+            if "케이엠에프" in x.get("corp_name", ""):
                 corp = x["corp_code"]
         if corp or pg >= int(r.get("total_page", 1) or 1): break
     out["corp"] = corp
     if corp:
         r = call("list.json", corp_code=corp, bgn_de="20261001", end_de="20261122", page_count=100)
-        out["list"] = [(x["report_nm"], x["rcept_no"]) for x in (r.get("list") or [])]
+        out["list"] = [(x["report_nm"], x["rcept_no"], x["rcept_dt"]) for x in (r.get("list") or [])]
     return out
 
 
