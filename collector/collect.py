@@ -494,9 +494,20 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
+def probe_comp():
+    out = {}
+    t = text_of(get(DETAIL.format("2352")))
+    k = t.find("희망공모가액")
+    out["head"] = t[k: k + 700]
+    out["comp"] = [t[max(0, m.start() - 60): m.start() + 160] for m in re.finditer(r"경쟁률|미달", t)][:8]
+    return out
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_comp(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
