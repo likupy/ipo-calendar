@@ -485,26 +485,30 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 def probe_elig():
-    ids = {"진코스텍":"20261001000594","디티에스":"20261012000323","SK스팩14":"20261014000202","인텔리빅스":"20261020000365","아이엠스팩1":"20261022000376","바로팜":"20261030000406","엠비디":"20261110000261","유캐스트":"20261117000116","엠디에스코리아":"20261117000221"}
     out = {}
-    for k, rc in ids.items():
-        try:
-            t = fetch_doc_text(rc)
-        except Exception as e:
-            out[k] = f"ERR {e}"; continue
-        hd = [m.group(0) for m in ELIG_HDR.finditer(t)]
-        secs = broker_sections(t)
-        info = {"hdrs": hd[:12], "secs": {}}
-        for b, s in secs.items():
-            if b in ("미래","유진","하나","한화","iM","SK"):
-                info["secs"][b] = s[:1800]
-        for b in ("미래에셋","유진투자","하나증권","한화투자","iM증권","SK증권"):
-            for m in re.finditer(b, t):
-                seg = t[m.start(): m.start()+250]
-                if "수수료" in seg or "개설" in seg:
-                    info.setdefault("ctx", []).append(seg); 
-                    if len(info["ctx"]) >= 4: break
+    for k, rc in {"인텔리빅스": "20261020000365", "엠디에스코리아": "20261117000221"}.items():
+        t = fetch_doc_text(rc)
+        info = {"len": len(t), "n_cheongyak_jagyeok": len(re.findall(r"청약\s*자격", t)), "ctx": []}
+        for m in re.finditer(r"청약\s*수수료|계좌\s*개설|계좌를\s*개설|개설된", t):
+            seg = t[max(0, m.start() - 80): m.start() + 220]
+            if "기관" in seg[:120] and "일반" not in seg: continue
+            info["ctx"].append(seg)
+            if len(info["ctx"]) >= 14: break
         out[k] = info
+    r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100)
+    hs = [x for x in (r.get("list") or []) if "한화" in x.get("corp_name", "") or "한화" in x.get("report_nm", "")]
+    info = {"list": [(x["corp_name"], x["rcept_no"], x["report_nm"]) for x in hs]}
+    for x in sorted(hs, key=lambda x: x["rcept_no"], reverse=True):
+        try:
+            t = fetch_doc_text(x["rcept_no"])
+        except Exception:
+            continue
+        secs = broker_sections(t)
+        info["hdrs"] = [m.group(0) for m in ELIG_HDR.finditer(t)][:6]
+        info["secs"] = {b: v[:1600] for b, v in secs.items() if b == "한화"}
+        info["rc"] = x["rcept_no"]
+        break
+    out["한화"] = info
     return out
 
 
