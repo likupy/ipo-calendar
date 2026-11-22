@@ -294,9 +294,9 @@ def doc_text_any(m):
     raise RuntimeError("본문 없음")
 
 
-ELIG_VER = 1   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
+ELIG_VER = 2   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
 
-ELIG_HDR = re.compile(r"[【\[]\s*([^【】\[\]]{0,30}?)\s*청약\s*자격\s*[】\]]")
+ELIG_HDR = re.compile(r"[【\[]\s*([^【】\[\]]{0,30}?)\s*(?:청약|참가)\s*자격\s*[】\]]")
 # 계좌개설 마감 (비대면 기준). 위에서부터 먼저 맞는 것을 쓴다.
 ACCT_RULES = [
     (re.compile(r"(\d)\s*영업일\s*까지"), None),   # 신영: 청약 초일 직전 4영업일까지
@@ -308,6 +308,11 @@ ACCT_RULES = [
     (re.compile(r"청약\s*시작일\s*전일\(영업일\s*기준\)까지\s*비대면\s*개설"), "전일"),   # IBK
     (re.compile(r"청약\s*개시일\s*직전\s*영업일까지\s*개설"), "전일"),   # BNK
     (re.compile(r"청약\s*당일\s*계좌\s*개설\s*後\s*공모주\s*온라인\s*청약만\s*가능합니다\.\s*1\)\s*비대면"), "당일"),   # 삼성
+    (re.compile(r"다음의\s*계좌는\s*청약\s*당일\s*계좌\s*개설\s*후\s*공모주\s*청약이\s*가능합니다\.\s*①\s*비대면"), "당일"),   # 하나
+    (re.compile(r"청약\s*기간\s*내\s*영업점\s*창구\s*개설\s*계좌\s*청약\s*불가\s*※\s*비대면"), "당일"),   # 미래에셋
+    (re.compile(r"청약\s*당일\s*비대면\s*개설\s*또는\s*제휴은행\s*개설"), "당일"),   # SK
+    (re.compile(r"청약\s*초일\s*전일까지\s*청약가능한\s*주식계좌\s*개설\s*고객\s*청약채널"), "전일"),   # 유진
+    (re.compile(r"청약\s*개시일\s*직전일까지\s*개설"), "전일"),   # iM
 ]
 # 청약수수료 (온라인 청약 기준, 등급 면제 전 금액). 증권사별로 표기가 달라 아는 형식만 읽는다.
 FEE_RULES = [
@@ -320,6 +325,10 @@ FEE_RULES = [
     re.compile(r"MTS,\s*HTS,\s*SMT,\s*홈페이지\s*면제\s*건당\s*([\d,]+)\s*원"),   # NH
     re.compile(r"온라인\s+면제\s+면제\s+면제\s+[\d,]+원\s+([\d,]+)\s*원"),   # 신한 (일반 등급)
     re.compile(r"온라인\s*청약\s*:\s*([\d,]+)\s*원"),   # 유안타
+    re.compile(r"온라인\s*및\s*ARS\s*청약\s*수수료\s*(?:면제\s*){3}([\d,]+)\s*원"),   # 하나
+    re.compile(r"온라인\s*\(HTS/MTS/WEB\)\s*([\d,]+)\s*원"),   # 유진 (N천원은 아래에서 숫자로 바꿈)
+    re.compile(r"온라인\s*\(HTS,\s*WTS,\s*MTS\)\s*및\s*ARS\s*청약\s*([\d,]+)\s*원"),   # iM
+    re.compile(r"온라인\s*매체\s*청약\([^)]*\)\s*\d+%\s*0원\(단,\s*[A-Za-z가-힣]+\s*등급\s*([\d,]+)\s*원\)"),   # 미래에셋 (최저 등급 기준)
     re.compile(r"150%\s*미해당\s*고객\s*[\d,]+원\s+([\d,]+)\s*원"),   # IBK (오프라인 다음 온라인)
 ]
 
@@ -346,8 +355,9 @@ def parse_elig(txt):
             if m:
                 acct[b] = f"{m.group(1)}영업일 전" if label is None else label
                 break
+        sec_f = re.sub(r"(\d)\s*천\s*원", lambda x: f"{int(x.group(1)) * 1000}원", sec)
         for rx in FEE_RULES:
-            m = rx.search(sec)
+            m = rx.search(sec_f)
             if m:
                 nums = [int(n.replace(",", "")) for n in re.findall(r"([\d,]+)\s*원", m.group(1) + "원")] if "무료" in m.group(1) else [int(m.group(1).replace(",", ""))]
                 if nums and max(nums) > 0:
@@ -484,39 +494,9 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
-def probe_elig():
-    out = {}
-    for k, rc in {"인텔리빅스": "20261020000365", "엠디에스코리아": "20261117000221"}.items():
-        t = fetch_doc_text(rc)
-        info = {"len": len(t), "n_cheongyak_jagyeok": len(re.findall(r"청약\s*자격", t)), "ctx": []}
-        for m in re.finditer(r"청약\s*수수료|계좌\s*개설|계좌를\s*개설|개설된", t):
-            seg = t[max(0, m.start() - 80): m.start() + 220]
-            if "기관" in seg[:120] and "일반" not in seg: continue
-            info["ctx"].append(seg)
-            if len(info["ctx"]) >= 14: break
-        out[k] = info
-    r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100)
-    hs = [x for x in (r.get("list") or []) if "한화" in x.get("corp_name", "") or "한화" in x.get("report_nm", "")]
-    info = {"list": [(x["corp_name"], x["rcept_no"], x["report_nm"]) for x in hs]}
-    for x in sorted(hs, key=lambda x: x["rcept_no"], reverse=True):
-        try:
-            t = fetch_doc_text(x["rcept_no"])
-        except Exception:
-            continue
-        secs = broker_sections(t)
-        info["hdrs"] = [m.group(0) for m in ELIG_HDR.finditer(t)][:6]
-        info["secs"] = {b: v[:1600] for b, v in secs.items() if b == "한화"}
-        info["rc"] = x["rcept_no"]
-        break
-    out["한화"] = info
-    return out
-
-
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
-    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
-        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_elig(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
