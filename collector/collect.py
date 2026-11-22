@@ -494,9 +494,43 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
+def probe_three():
+    out = {}
+    h = get(DETAIL.format("2334"))
+    t = text_of(h)
+    out["len38"] = len(t)
+    out["links"] = sorted(set(re.findall(r'href="([^"]*2334[^"]*)"', h)))[:20]
+    ctx = []
+    for m in re.finditer(r"경쟁률|확약|유통가능|유통물량|유통비율|보호예수|의무보유", t):
+        ctx.append(t[max(0, m.start() - 60): m.start() + 200])
+        if len(ctx) >= 25: break
+    out["ctx38"] = ctx
+    r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100)
+    items = [x for x in (r.get("list") or []) if "에어로" in x.get("corp_name", "") and "하나" in x.get("corp_name", "")]
+    out["dart_list"] = [(x["corp_name"], x["rcept_no"], x["report_nm"], x["rcept_dt"]) for x in items]
+    if not items:
+        out["dart_names"] = sorted({x["corp_name"] for x in (r.get("list") or [])})[:100]
+    docs = {}
+    for x in sorted(items, key=lambda x: x["rcept_no"]):
+        try:
+            tx = fetch_doc_text(x["rcept_no"])
+        except Exception as e:
+            docs[x["rcept_no"]] = "ERR %s" % e
+            continue
+        c = []
+        for m in re.finditer(r"의무보유\s*확약|유통가능|유통\s*가능\s*(?:물량|주식|금액)", tx):
+            c.append(tx[max(0, m.start() - 80): m.start() + 260])
+            if len(c) >= 10: break
+        docs[x["rcept_no"] + " " + x["report_nm"]] = c
+    out["docs"] = docs
+    return out
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_three(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
