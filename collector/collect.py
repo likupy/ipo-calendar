@@ -494,44 +494,9 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
-def probe_three():
-    out = {}
-    t = text_of(get(DETAIL.format("2334")))
-    k = t.find("4.공모후 유통가능")
-    out["tbl38"] = t[k: k + 3500]
-    k2 = t.find("수요예측결과")
-    out["dem38"] = t[k2: k2 + 2200]
-    corp = None
-    for pg in range(1, 8):
-        r = call("list.json", bgn_de="20261001", end_de="20261122", pblntf_ty="C", pblntf_detail_ty="C001", page_count=100, page_no=pg)
-        for x in (r.get("list") or []):
-            if "에어로" in x.get("corp_name", "") and ("하나" in x.get("corp_name", "") or "에어로다이" in x.get("corp_name", "")):
-                corp = x["corp_code"]; out["corp_name"] = x["corp_name"]
-        if corp or pg >= int(r.get("total_page", 1) or 1): break
-    out["corp"] = corp
-    docs = {}
-    if corp:
-        r = call("list.json", corp_code=corp, bgn_de="20260901", end_de="20261122", page_count=100)
-        out["dart_list"] = [(x["report_nm"], x["rcept_no"], x["rcept_dt"]) for x in (r.get("list") or [])]
-        for x in sorted(r.get("list") or [], key=lambda x: x["rcept_no"]):
-            try:
-                tx = fetch_doc_text(x["rcept_no"])
-            except Exception as e:
-                docs[x["rcept_no"] + " " + x["report_nm"]] = ["ERR %s" % e]; continue
-            c = []
-            for m in re.finditer(r"의무보유\s*확약\s*(?:비율|신청|내역|물량)|유통가능\s*(?:물량|주식|금액)|상장\s*직후\s*유통", tx):
-                c.append(tx[max(0, m.start() - 60): m.start() + 300])
-                if len(c) >= 6: break
-            docs[x["rcept_no"] + " " + x["report_nm"]] = c
-    out["docs"] = docs
-    return out
-
-
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
-    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
-        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_three(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
