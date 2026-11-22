@@ -494,9 +494,33 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 
+def probe_alloc():
+    out = {}
+    tx = fetch_doc_text("20261113000458")
+    out["len"] = len(tx)
+    out["ctx"] = []
+    for m in re.finditer(r"확약|의무보유|보호예수|기관투자자", tx):
+        out["ctx"].append(tx[max(0, m.start() - 100): m.start() + 350])
+        if len(out["ctx"]) >= 12: break
+    h = get(DETAIL.format("2334"))
+    out["hrefs38"] = sorted(set(re.findall(r'href="([^"]+)"', h)))[:60]
+    res = {}
+    for u in ["https://kind.krx.co.kr/listinvstg/pubofrprogcom.do?method=searchPubofrProgComMain",
+              "https://kind.krx.co.kr/common/stockschedule.do?method=searchStockScheduleMain",
+              "https://kind.krx.co.kr/disclosure/details.do?method=searchDetailsMain"]:
+        try:
+            b = get(u, timeout=20); res[u] = (len(b), text_of(b)[:300])
+        except Exception as e:
+            res[u] = str(e)[:200]
+    out["kind"] = res
+    return out
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_alloc(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
