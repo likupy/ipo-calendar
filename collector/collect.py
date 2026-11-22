@@ -486,6 +486,8 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "PROBE")):
+        d = json.load(open(OUT, encoding="utf-8")); d["probe"] = probe_elig(); json.dump(d, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1); return
     old, old_doc = {}, {}
     if os.path.exists(OUT):
         try:
@@ -687,3 +689,27 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def probe_elig():
+    ids = {"진코스텍":"20261001000594","디티에스":"20261012000323","SK스팩14":"20261014000202","인텔리빅스":"20261020000365","아이엠스팩1":"20261022000376","바로팜":"20261030000406","엠비디":"20261110000261","유캐스트":"20261117000116","엠디에스코리아":"20261117000221"}
+    out = {}
+    for k, rc in ids.items():
+        try:
+            t = fetch_doc_text(rc)
+        except Exception as e:
+            out[k] = f"ERR {e}"; continue
+        hd = [m.group(0) for m in ELIG_HDR.finditer(t)]
+        secs = broker_sections(t)
+        info = {"hdrs": hd[:12], "secs": {}}
+        for b, s in secs.items():
+            if b in ("미래","유진","하나","한화","iM","SK"):
+                info["secs"][b] = s[:1800]
+        for b in ("미래에셋","유진투자","하나증권","한화투자","iM증권","SK증권"):
+            for m in re.finditer(b, t):
+                seg = t[m.start(): m.start()+250]
+                if "수수료" in seg or "개설" in seg:
+                    info.setdefault("ctx", []).append(seg); 
+                    if len(info["ctx"]) >= 4: break
+        out[k] = info
+    return out
