@@ -686,9 +686,11 @@ def enrich(merged, old, alias):
                 log(f"  YouTube 영상 {len(vids)}개 읽음")
             keys = [yt_key(it["name"])] + [yt_key(a) for a in alias.get(iid, [])]
             cand = {v["id"]: v for v in vids if v.get("id") and any(k and k in yt_key(v["t"]) for k in keys)}
-            keep = {v["id"]: v for v in e.get("yt", []) if v.get("lv") is False}   # 이미 '라이브 아님'으로 확인한 영상은 그대로 둔다
+            apikey = os.environ.get("YT_API_KEY", "").strip()
+            # API 키가 없을 때만 예전에 '라이브 아님'으로 확인한 영상을 그대로 둔다. 키가 있으면 매번 다시 확인한다.
+            keep = {} if apikey else {v["id"]: v for v in e.get("yt", []) if v.get("lv") is False}
             todo = [i for i in cand if i not in keep]
-            flags = yt_live_flags(todo, os.environ.get("YT_API_KEY", "").strip()) if todo else {}
+            flags = yt_live_flags(todo, apikey) if todo else {}
             for i in todo:
                 lv = flags.get(i)
                 if lv is None:   # 확인이 안 되면 제목에 라이브 표시가 있는 것만 뺀다
@@ -696,6 +698,7 @@ def enrich(merged, old, alias):
                 if not lv:
                     keep[i] = dict(cand[i], lv=False)
             e["yt"] = sorted(keep.values(), key=lambda v: v.get("p", ""), reverse=True)[:4]
+            log(f"  영상 {it['name']}: 후보 {len(cand)}개 → 동영상 {len(keep)}개 (API {'사용' if apikey else '없음'}, 라이브/쇼츠 제외 {sum(1 for i in todo if i not in keep)}개)")
         except Exception as ex:
             log("  YouTube 실패", ex)
         it["ext"] = e

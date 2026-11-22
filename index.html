@@ -690,7 +690,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       } else {
         const per = Math.round(+(f.req / f.pr).toFixed(2) * p.price * p.margin / 100);
         h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr><tr><td>' + esc(nm) + '</td><td>' + f2(f.eq / f.n_fin) + '주</td><td>' + fmt(per) + '원</td></tr></table>' +
-          '<p class="xex" style="margin-top:8px">균등배정은 균등 물량을 청약 건수로 나눈 평균이에요. 비례배정은 1주를 받으려면 필요한 청약 증거금이에요.</p>';
+          '';
       }
     } else if (f) {
       h += '<div class="w">증권사별 결과는 공시를 확인한 뒤 표시돼요.</div>';
