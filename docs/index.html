@@ -284,10 +284,15 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .xm div:nth-child(odd) { color: var(--ink-2); }
 .xm div:nth-child(even) { text-align: right; font-weight: 700; }
 .xm .nw { color: var(--down); }
-.xfin { margin-top: 16px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; }
-.xfin .t { font-size: 13px; font-weight: 700; }
-.xfin .w { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
-.xfin table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.xcd { margin-top: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.xcd .lb { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.xcd .bg { margin-top: 4px; font-size: 26px; font-weight: 700; letter-spacing: -.3px; font-variant-numeric: tabular-nums; }
+.xcd .bg small { margin-left: 2px; font-size: 14px; font-weight: 600; }
+.xcd .chg { display: inline-flex; gap: 5px; align-items: center; margin-top: 8px; padding: 5px 9px; border-radius: 8px; background: var(--today); font-size: 12px; color: var(--ink-2); }
+.xcd .chg b { color: var(--ink); }
+.xcd .ex { margin-top: 8px; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.xfin .w { margin-top: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.xfin table { width: 100%; margin-top: 0; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .xfin th { padding: 0 0 5px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: right; }
 .xfin th:first-child { text-align: left; }
 .xfin td { padding: 8px 0; border-top: 1px solid var(--line); text-align: right; font-weight: 700; }
@@ -666,7 +671,15 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const ended = p.sub && ts(p.sub[1]) < kstToday();
     const hasDem = e.comp != null && p.price != null;
     const calc = e.inst && e.free && p.price != null;
+    const f = e.fin;
+    const d1 = p.id === 'n2334' && hasDem && e.lock_pct != null && f && f.inst && f.unlock != null && calc && e.apply_qty && e.lock_qty != null;
     let h = '<div class="sec"><h4>공모 지표</h4>';
+    if (d1) {
+      const lk1 = (f.inst - f.unlock) / f.inst * 100, fl0 = (e.free - e.inst * e.lock_qty / e.apply_qty) * p.price, fl1 = (e.free - (f.inst - f.unlock)) * p.price;
+      h += '<div class="xcd"><div class="lb">기관 수요예측 경쟁률</div><div class="bg">' + f2(e.comp) + '<small>: 1</small></div><div class="ex">기관 투자자 신청이 공모 물량의 약 ' + fmt(Math.round(e.comp)) + '배였어요.</div></div>' +
+        '<div class="xcd"><div class="lb">의무보유 확약 비율</div><div class="bg">' + f2(lk1) + '<small>%</small></div><div class="chg">수요예측 후 ' + f2(e.lock_pct) + '% <span>→</span> <b>' + f2(lk1) + '%</b></div><div class="ex">기관이 일정 기간 팔지 않겠다고 약속한 비율이에요.</div></div>' +
+        '<div class="xcd"><div class="lb">유통가능금액</div><div class="bg">' + fmt(Math.round(fl1 / 1e8)) + '<small>억원</small></div><div class="chg">수요예측 후 ' + eok(fl0) + ' <span>→</span> <b>' + eok(fl1) + '</b></div><div class="ex">상장 직후 시장에서 거래될 수 있는 주식의 금액이에요. (확약 반영)</div></div>';
+    } else {
     if (hasDem) {
       h += '<div class="xph"><span class="k">기관 수요예측 경쟁률</span><span class="v">' + f2(e.comp) + ' : 1</span></div>' +
         '<p class="xex">기관 투자자 신청이 공모 물량의 약 ' + fmt(Math.round(e.comp)) + '배였어요.</p>';
@@ -682,7 +695,6 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     } else {
       h += '<div class="xst wait"><div class="h">수요예측 후</div><div class="w">의무보유 확약 비율과 유통가능금액이 표시돼요.</div></div>';
     }
-    const f = e.fin;
     if (f && f.inst && f.unlock != null) {
       let rows = '<div>의무보유 확약 비율</div><div class="nw">' + f2((f.inst - f.unlock) / f.inst * 100) + '%</div>';
       if (calc) rows += '<div>유통가능금액</div><div class="nw">' + eok((e.free - (f.inst - f.unlock)) * p.price) + '</div>';
@@ -693,13 +705,13 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     }
     h += '</div>';
     if (hasDem) h += '<p class="xex" style="margin-top:12px"><b>확약</b>은 기관이 일정 기간 팔지 않겠다고 약속한 것이에요. <b>유통가능금액</b>은 상장 직후 시장에서 거래될 수 있는 주식의 금액이에요.</p>';
+    }
+    h += '<p class="note">공시 기준 참고용이에요. 유통가능금액은 계산한 값이에요.</p></div>';
     /* 최종 경쟁률 */
-    h += '<div class="xfin"><div class="t">최종 경쟁률</div>';
+    h += '<div class="sec"><h4>최종 경쟁률</h4><div class="xfin">';
     if (f && f.n_fin && f.req != null && f.gen && f.eq && f.pr && p.brokers.length === 1 && p.margin && p.price != null) {
       const b = p.brokers[0], nm = BN[b] || (b + '증권');
-      if (f.req < f.gen) {
-        h += '<div class="w">일반청약이 미달이었어요. 청약한 수량이 전부 배정돼요.</div>';
-      } else {
+      {
         const per = Math.round(+(f.req / f.pr).toFixed(2) * p.price * p.margin / 100);
         h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr><tr><td>' + esc(nm) + '</td><td>' + f2(f.eq / f.n_fin) + '주</td><td>' + fmt(per) + '원</td></tr></table>' +
           '';
@@ -711,7 +723,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     } else {
       h += '<div class="w">청약(' + md(p.sub[0]) + '~' + md(p.sub[1]) + ')이 끝나고 배정 결과가 공시되면 표시돼요.</div>';
     }
-    h += '</div><p class="note">공시 기준 참고용이에요. 유통가능금액은 계산한 값이에요.</p></div>';
+    h += '</div></div>';
     /* 관련 링크 */
     const no = String(p.id).replace(/^n/, '');
     const d = e.dart || {};
@@ -744,12 +756,12 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     let cards = '', covered = 0;
     p.brokers.forEach(b => {
       let r = '';
-      if (p.ext && p.ext.alloc && p.ext.alloc[b] != null) {
-        const tot = Object.values(p.ext.alloc).reduce((a, c) => a + c, 0);
-        r += '<dt>배정 수량</dt><dd><b>' + fmt(p.ext.alloc[b]) + '주</b>' + (Object.keys(p.ext.alloc).length > 1 ? '<span class="sh">' + Math.round(p.ext.alloc[b] / tot * 100) + '%</span>' : '') + '</dd>';
-      }
       if (p.margin && p.minq && p.minq[b] && priced) {
         r += '<dt>최소 증거금</dt><dd><b>' + (p.price != null ? mn(p.price, p.minq[b]) : mn(p.band[0], p.minq[b]) + '–' + mn(p.band[1], p.minq[b])) + '원</b><span class="sh">' + p.minq[b] + '주</span></dd>';
+      }
+      if (p.ext && p.ext.alloc && p.ext.alloc[b] != null) {
+        const tot = Object.values(p.ext.alloc).reduce((a, c) => a + c, 0);
+        r += '<dt>배정 수량</dt><dd>' + fmt(p.ext.alloc[b]) + '주' + (Object.keys(p.ext.alloc).length > 1 ? '<span class="sh">' + Math.round(p.ext.alloc[b] / tot * 100) + '%</span>' : '') + '</dd>';
       }
       if (p.acct && p.acct[b]) r += '<dt>계좌개설</dt><dd>청약 ' + esc(p.acct[b]) + '</dd>';
       if (p.fee && p.fee[b]) r += '<dt>청약수수료</dt><dd>' + fmt(p.fee[b]) + '원</dd>';
