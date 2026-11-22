@@ -620,6 +620,32 @@ def yt_videos():
     return vids
 
 
+def yt_live_flags(ids, key):
+    """영상이 라이브(생중계·다시보기)인지: True/False/None(모름). API 키가 있으면 liveStreamingDetails 로, 없으면 영상 페이지의 isLiveContent 로 본다."""
+    out = {}
+    if key:
+        try:
+            for i in range(0, len(ids), 50):
+                j = json.loads(get("https://www.googleapis.com/youtube/v3/videos?" + urllib.parse.urlencode(
+                    {"part": "liveStreamingDetails,contentDetails", "id": ",".join(ids[i:i + 50]), "key": key}), timeout=30))
+                for it in j.get("items", []):
+                    dur = re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?$", it.get("contentDetails", {}).get("duration", ""))
+                    short = bool(dur) and int(dur.group(1) or 0) == 0 and int(dur.group(2) or 0) <= 60
+                    out[it["id"]] = bool(it.get("liveStreamingDetails")) or short   # 라이브·쇼츠는 '동영상' 탭이 아니다
+            return out
+        except Exception as ex:
+            log("  YouTube videos API 실패:", ex)
+    for v in ids:
+        try:
+            h = get("https://www.youtube.com/watch?v=" + v, timeout=30)
+            m = re.search(r'"isLiveContent":(true|false)', h)
+            out[v] = None if not m else (m.group(1) == "true")
+        except Exception as ex:
+            log("  영상 페이지 확인 실패", v, ex)
+            out[v] = None
+    return out
+
+
 def yt_key(s):
     return re.sub(r"[\s\[\]()\-_·,.!?'\"~]", "", s or "")
 
@@ -659,11 +685,17 @@ def enrich(merged, old, alias):
                 vids = yt_videos()
                 log(f"  YouTube 영상 {len(vids)}개 읽음")
             keys = [yt_key(it["name"])] + [yt_key(a) for a in alias.get(iid, [])]
-            hit = {v["id"]: v for v in e.get("yt", [])}
-            for v in vids:
-                if v.get("id") and any(k and k in yt_key(v["t"]) for k in keys):
-                    hit[v["id"]] = v
-            e["yt"] = sorted(hit.values(), key=lambda v: v.get("p", ""), reverse=True)[:4]
+            cand = {v["id"]: v for v in vids if v.get("id") and any(k and k in yt_key(v["t"]) for k in keys)}
+            keep = {v["id"]: v for v in e.get("yt", []) if v.get("lv") is False}   # 이미 '라이브 아님'으로 확인한 영상은 그대로 둔다
+            todo = [i for i in cand if i not in keep]
+            flags = yt_live_flags(todo, os.environ.get("YT_API_KEY", "").strip()) if todo else {}
+            for i in todo:
+                lv = flags.get(i)
+                if lv is None:   # 확인이 안 되면 제목에 라이브 표시가 있는 것만 뺀다
+                    lv = bool(re.search(r"LIVE|라이브|실시간", cand[i]["t"], re.I))
+                if not lv:
+                    keep[i] = dict(cand[i], lv=False)
+            e["yt"] = sorted(keep.values(), key=lambda v: v.get("p", ""), reverse=True)[:4]
         except Exception as ex:
             log("  YouTube 실패", ex)
         it["ext"] = e
