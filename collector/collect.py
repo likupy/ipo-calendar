@@ -495,7 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
-EXT_IDS = {"n2352", "n2334", "n2340"}   # 유캐스트, 하나에어로다이내믹스, 케이엠에프
+YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
 
@@ -589,34 +589,68 @@ def dart_reports(corp, sub0):
     return out
 
 
+def yt_channels(key):
+    """영상을 찾을 채널 목록 [{id, name}]. 두 번째 채널은 핸들로 찾는다(못 찾으면 첫 채널만)."""
+    chs = [{"id": YT_CHANNEL, "name": "공모주투자의법칙"}]
+    try:
+        cid = name = None
+        if key:
+            j = json.loads(get("https://www.googleapis.com/youtube/v3/channels?" + urllib.parse.urlencode(
+                {"part": "snippet", "forHandle": "@" + YT_HANDLE2, "key": key}), timeout=30))
+            if j.get("items"):
+                cid, name = j["items"][0]["id"], j["items"][0]["snippet"]["title"]
+        if not cid:
+            h = get("https://www.youtube.com/@" + urllib.parse.quote(YT_HANDLE2), timeout=30)
+            m = re.search(r'"channelId":"(UC[\w-]{22})"', h) or re.search(r'channel/(UC[\w-]{22})', h)
+            if m:
+                cid = m.group(1)
+                n = re.search(r'<meta property="og:title" content="([^"]+)"', h)
+                name = n.group(1) if n else YT_HANDLE2
+        if cid and cid != YT_CHANNEL:
+            chs.append({"id": cid, "name": name or YT_HANDLE2})
+            log(f"  YouTube 두 번째 채널: {name} ({cid})")
+        elif not cid:
+            log("  YouTube 두 번째 채널을 못 찾음")
+    except Exception as ex:
+        log("  YouTube 두 번째 채널 확인 실패:", ex)
+    return chs
+
+
 def yt_videos():
-    """공모주투자의법칙 채널의 영상 제목 목록. YT_API_KEY 가 있으면 최근 수백 개, 없으면 RSS(최근 15개)."""
+    """채널들의 영상 제목 목록. YT_API_KEY 가 있으면 채널당 최근 수백 개, 없으면 RSS(채널당 최근 15개)."""
     key = os.environ.get("YT_API_KEY", "").strip()
     vids = []
-    if key:
-        try:
-            tok = ""
-            for _ in range(6):
-                u = "https://www.googleapis.com/youtube/v3/playlistItems?" + urllib.parse.urlencode(
-                    {"part": "snippet", "maxResults": 50, "playlistId": "UU" + YT_CHANNEL[2:], "key": key, "pageToken": tok})
-                j = json.loads(get(u, timeout=30))
-                for it in j.get("items", []):
-                    sn = it.get("snippet", {})
-                    vids.append({"id": sn.get("resourceId", {}).get("videoId"), "t": sn.get("title", ""), "p": (sn.get("publishedAt") or "")[:10]})
-                tok = j.get("nextPageToken", "")
-                if not tok:
-                    break
-            if vids:
-                return vids
-        except Exception as ex:
-            log("  YouTube API 실패, RSS 로 대체:", ex)
-    x = get("https://www.youtube.com/feeds/videos.xml?channel_id=" + YT_CHANNEL, timeout=30)
-    for en in re.findall(r"<entry>(.*?)</entry>", x, re.S):
-        i = re.search(r"<yt:videoId>([^<]+)</yt:videoId>", en)
-        t = re.search(r"<title>([^<]*)</title>", en)
-        d = re.search(r"<published>(\d{4}-\d\d-\d\d)", en)
-        if i and t:
-            vids.append({"id": i.group(1), "t": re.sub(r"&amp;", "&", re.sub(r"&#39;|&apos;", "'", t.group(1))), "p": d.group(1) if d else ""})
+    for ch in yt_channels(key):
+        got = []
+        if key:
+            try:
+                tok = ""
+                for _ in range(6):
+                    u = "https://www.googleapis.com/youtube/v3/playlistItems?" + urllib.parse.urlencode(
+                        {"part": "snippet", "maxResults": 50, "playlistId": "UU" + ch["id"][2:], "key": key, "pageToken": tok})
+                    j = json.loads(get(u, timeout=30))
+                    for it in j.get("items", []):
+                        sn = it.get("snippet", {})
+                        got.append({"id": sn.get("resourceId", {}).get("videoId"), "t": sn.get("title", ""), "p": (sn.get("publishedAt") or "")[:10], "c": ch["name"]})
+                    tok = j.get("nextPageToken", "")
+                    if not tok:
+                        break
+            except Exception as ex:
+                log("  YouTube API 실패, RSS 로 대체:", ch["name"], ex)
+                got = []
+        if not got:
+            try:
+                x = get("https://www.youtube.com/feeds/videos.xml?channel_id=" + ch["id"], timeout=30)
+                for en in re.findall(r"<entry>(.*?)</entry>", x, re.S):
+                    i = re.search(r"<yt:videoId>([^<]+)</yt:videoId>", en)
+                    t = re.search(r"<title>([^<]*)</title>", en)
+                    d = re.search(r"<published>(\d{4}-\d\d-\d\d)", en)
+                    if i and t:
+                        got.append({"id": i.group(1), "t": re.sub(r"&amp;", "&", re.sub(r"&#39;|&apos;", "'", t.group(1))), "p": d.group(1) if d else "", "c": ch["name"]})
+            except Exception as ex:
+                log("  YouTube RSS 실패:", ch["name"], ex)
+        log(f"  YouTube {ch['name']}: {len(got)}개")
+        vids += got
     return vids
 
 
@@ -652,9 +686,13 @@ def yt_key(s):
 
 def enrich(merged, old, alias):
     vids = None
-    for iid in sorted(EXT_IDS):
+    today = datetime.now(KST).date()
+    for iid in sorted(merged):
         it = merged.get(iid)
-        if not it:
+        if not it or it.get("withdrawn") or not it.get("sub"):
+            continue
+        if date.fromisoformat(it["sub"][1]) < today - timedelta(days=60) and (old.get(iid) or {}).get("ext"):
+            it["ext"] = old[iid]["ext"]   # 두 달 지난 종목은 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
         sub0 = date.fromisoformat(it["sub"][0])

@@ -698,6 +698,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     h += '<div class="ex">상장 직후 시장에서 거래될 수 있는 주식의 금액이에요. (확약 반영)</div></div>';
     h += '<p class="note">공시 기준 참고용이에요. 유통가능금액은 계산한 값이에요.</p></div>';
     /* 최종 경쟁률 */
+    if (p.spac) h = '';   // 스팩은 수요예측이 없어 공모 지표를 보여주지 않는다
     const base = h;
     h = '<div class="sec"><h4>최종 경쟁률</h4><div class="xfin">';
     if (f && f.n_fin && f.req != null && f.gen && f.eq && f.pr && p.brokers.length === 1 && p.margin && p.price != null) {
@@ -728,7 +729,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     h += '<div class="sec"><h4>영상</h4>';
     if (e.yt && e.yt.length) {
       h += '<div class="xyts">' + e.yt.map(v => '<a class="xyc" href="https://www.youtube.com/watch?v=' + esc(v.id) + '" target="_blank" rel="noopener noreferrer">' +
-        '<div class="xth" style="background-image:url(https://i.ytimg.com/vi/' + esc(v.id) + '/mqdefault.jpg)"><div class="pl">▶</div></div><b>' + esc(v.t) + '</b><span>공모주투자의법칙' + (v.p ? ' · ' + md(v.p) : '') + '</span></a>').join('') + '</div>';
+        '<div class="xth" style="background-image:url(https://i.ytimg.com/vi/' + esc(v.id) + '/mqdefault.jpg)"><div class="pl">▶</div></div><b>' + esc(v.t) + '</b><span>' + esc(v.c || '공모주투자의법칙') + (v.p ? ' · ' + md(v.p) : '') + '</span></a>').join('') + '</div>';
     } else {
       h += '<p class="xex">영상이 아직 없어요.</p>';
     }
