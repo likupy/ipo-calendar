@@ -559,6 +559,25 @@ def parse_report(t):
     return f if "unlock" in f else {}
 
 
+def parse_report_brokers(t, brokers):
+    """증권발행실적보고서의 '일반투자자 세부 배정 현황[증권사]' 표마다 합계 줄을 읽어 증권사별 {n 청약건수, req 청약수량, eq 균등배정수량, pr 비례배정수량}."""
+    hs = [(m.start(), m.group(1)) for m in re.finditer(r"\[([^\[\]]{2,14})\]", t) if "증권" in m.group(1)]
+    out = {}
+    for i, (pos, name) in enumerate(hs):
+        key = next((b for b in brokers if b in name), None)
+        if not key or key in out:
+            continue
+        seg = t[pos:hs[i + 1][0] if i + 1 < len(hs) else len(t)]
+        m = re.search(r"합계\s+((?:[\d,]+(?:\.\d+)?%?\s+|-\s+){14})", seg)
+        if not m:
+            continue
+        tk = re.findall(r"[\d,]+(?:\.\d+)?%?|-", m.group(1))
+        if "-" in (tk[0], tk[1], tk[6], tk[11]):
+            continue
+        out[key] = {"n": num(tk[0]), "req": num(tk[1]), "eq": num(tk[6]), "pr": num(tk[11])}
+    return out if len(out) == len(brokers) else {}
+
+
 def find_corp(name, sub0):
     end = sub0
     bgn = sub0 - timedelta(days=75)
@@ -960,11 +979,13 @@ def main():
 
 def probe():
     out = {}
-    for nm, rc in (("디티에스", "20261016000472"), ("빅웨이브로보틱스", "20260918000412")):
+    for nm, rc, br in (("디티에스", "20261016000472", ["대신", "유진"]), ("빅웨이브로보틱스", "20260918000412", ["유진", "미래"]), ("엘리스그룹", "20261013000356", ["미래", "삼성"])):
         try:
             t = fetch_doc_text(rc)
-            i = t.find("일반투자자 배정방식별")
-            out[nm] = t[i:i + 3500] if i >= 0 else t[:200]
+            r = parse_report_brokers(t, br)
+            f = parse_report(t)
+            out[nm] = {"brokers": r, "total_req": f.get("req"), "sum_req": sum(v["req"] for v in r.values()), "total_eq": f.get("eq"), "sum_eq": sum(v["eq"] for v in r.values()), "total_pr": f.get("pr"), "sum_pr": sum(v["pr"] for v in r.values()), "n_fin": f.get("n_fin"), "sum_n": sum(v["n"] for v in r.values()),
+                       "hdr": re.findall(r"\[[^\[\]]{2,14}\]", t)[:8], "sum_rows": [t[m.start():m.start() + 160] for m in re.finditer("합계", t)][:6]}
         except Exception as ex:
             out[nm] = str(ex)
     doc = json.load(open(OUT, encoding="utf-8"))
