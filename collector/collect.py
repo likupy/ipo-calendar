@@ -986,5 +986,34 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = text_of(get(DETAIL.format("2340")))
+        out["38"] = {"detail": parse_detail(t, "2340"), "snip": [t[max(0, m.start() - 80):m.start() + 160] for m in list(re.finditer("철회|진행상황|취소", t))[:4]]}
+    except Exception as ex:
+        out["38"] = str(ex)
+    try:
+        r = call("list.json", corp_code="01880139", bgn_de="20261020", end_de=datetime.now(KST).strftime("%Y%m%d"), page_count=100)
+        out["dart"] = [[x["rcept_dt"], x["report_nm"], x["rcept_no"]] for x in r.get("list", [])]
+    except Exception as ex:
+        out["dart"] = str(ex)
+    try:
+        lst = [u for u in LIST_PAGES]
+        ids = []
+        for u in lst:
+            ids += LINK.findall(get(u))
+        out["in_list"] = "2340" in ids
+        out["n_ids"] = len(ids)
+    except Exception as ex:
+        out["in_list"] = str(ex)
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
