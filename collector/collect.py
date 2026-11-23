@@ -495,7 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
-EXT_VER = 5
+EXT_VER = 6
 YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
@@ -576,6 +576,25 @@ def parse_report_brokers(t, brokers):
             continue
         out[key] = {"n": num(tk[0]), "req": num(tk[1]), "eq": num(tk[6]), "pr": num(tk[11])}
     return out if len(out) == len(brokers) else {}
+
+
+def parse_free_doc(t):
+    """투자설명서 '상장 이후 유통물량 출회에 따른 위험' 문장에서 상장 직후 유통가능 주식수(와 상장예정주식수). 정정 전·후가 함께 있으면 마지막 것을 쓴다."""
+    best = None
+    for rx, order in (
+        (r"상장\s*예정\s*주식수[^.]{0,60}?([\d,]{6,})\s*주\s*중\s*(?:약\s*)?([\d.]+)\s*%\s*에\s*해당하는\s*([\d,]+)\s*주는\s*상장\s*직후", "tpf"),
+        (r"상장\s*예정\s*주식수\s*([\d,]{6,})\s*주(?:\([^)]*\))?\s*중\s*상장일\s*유통가능\s*물량은\s*([\d,]+)\s*주\s*\(상장일\s*기준\s*([\d.]+)\s*%\)", "tfp"),
+    ):
+        for m in re.finditer(rx, t):
+            g = m.groups()
+            tot, free, pct = (num(g[0]), num(g[2]), float(g[1])) if order == "tpf" else (num(g[0]), num(g[1]), float(g[2]))
+            if tot and free and abs(free / tot * 100 - pct) < 0.1:
+                best = {"tot": tot, "free": free}
+        if best:
+            return best
+    for m in re.finditer(r"([\d,]+)\s*주\s*\(\s*([\d.]+)\s*%\s*\)\s*는\s*상장\s*직후\s*시장에서\s*유통", t):
+        best = {"free": num(m.group(1))}
+    return best
 
 
 def find_corp(name, sub0):
@@ -736,6 +755,13 @@ def enrich(merged, old, alias):
                 reps = dart_reports(e["corp"], sub0)
                 if reps:
                     e["dart"] = reps
+                if reps.get("설명서") and not e.get("free"):   # 38 에 '공모 후 유통가능 물량' 표가 없는 종목은 투자설명서에서 읽는다
+                    fr = parse_free_doc(fetch_doc_text(reps["설명서"]))
+                    if fr:
+                        e.update(fr)
+                        e["free_src"] = "DART"
+                    else:
+                        log("  유통가능 주식수를 못 읽음", it["name"], reps["설명서"])
                 if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
                     rtxt = fetch_doc_text(reps["실적"])
                     f = parse_report(rtxt)
@@ -996,21 +1022,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for nm, rc in (("에이엘로봇", "20261104000315"), ("에이엘로봇신고서", "20261104000314")):
-        try:
-            t = fetch_doc_text(rc)
-            out[nm] = {"len": len(t), "hits": [t[max(0, m.start() - 200):m.start() + 300].replace("\n", " ") for m in list(re.finditer("상장\\s*직후|유통가능", t))[:4]]}
-        except Exception as ex:
-            out[nm] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
