@@ -604,8 +604,12 @@ def dart_reports(corp, sub0):
             out["실적"] = x["rcept_no"]
         elif "투자설명서" in nm:
             out["설명서"] = x["rcept_no"]
+        elif "철회신고서" in nm:
+            out["철회"] = x["rcept_no"]
         elif "증권신고서" in nm and not re.search(r"효력|제출요구|철회", nm):
             out["신고서"] = x["rcept_no"]
+    if out.get("철회") and out.get("신고서") and out["신고서"] > out["철회"]:
+        del out["철회"]   # 철회한 뒤 다시 신고서를 낸 경우
     return out
 
 
@@ -941,6 +945,12 @@ def main():
                 chg("new", it, f"확정 공모가 {it['price']:,}원")
 
     # ---- 철회·삭제 ----
+    for oid, it in list(merged.items()):   # DART 에 철회신고서가 올라온 종목(38 이 아직 반영하지 않았거나 읽히지 않을 때)
+        if (it.get("ext") or {}).get("dart", {}).get("철회") and not (it.get("listing") and it["listing"] < today_iso):
+            merged.pop(oid)
+            log("  제외(DART 철회신고서):", it["name"])
+            if tracking and oid in old:
+                chg("chg", it, orig(it))
     for d in cancelled:
         it = merged.pop("n" + d["no"], None)
         if it and tracking and "n" + d["no"] in old:
@@ -986,34 +996,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    try:
-        t = text_of(get(DETAIL.format("2340")))
-        out["38"] = {"detail": parse_detail(t, "2340"), "snip": [t[max(0, m.start() - 80):m.start() + 160] for m in list(re.finditer("철회|진행상황|취소", t))[:4]]}
-    except Exception as ex:
-        out["38"] = str(ex)
-    try:
-        r = call("list.json", corp_code="01880139", bgn_de="20261020", end_de=datetime.now(KST).strftime("%Y%m%d"), page_count=100)
-        out["dart"] = [[x["rcept_dt"], x["report_nm"], x["rcept_no"]] for x in r.get("list", [])]
-    except Exception as ex:
-        out["dart"] = str(ex)
-    try:
-        lst = [u for u in LIST_PAGES]
-        ids = []
-        for u in lst:
-            ids += LINK.findall(get(u))
-        out["in_list"] = "2340" in ids
-        out["n_ids"] = len(ids)
-    except Exception as ex:
-        out["in_list"] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
