@@ -834,7 +834,8 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     sh.addEventListener('touchstart', e => {
       if (!phoneSheet() || e.touches.length !== 1 || zoomed()) { sg = null; return; }
       const t = e.touches[0];
-      sg = { x: t.clientX, y: t.clientY, top: sh.scrollTop, mode: null, t: Date.now(), dy: 0 };
+      const r0 = sh.getBoundingClientRect();
+      sg = { x: t.clientX, y: t.clientY, top: sh.scrollTop, mode: null, t: Date.now(), dy: 0, handle: t.clientY - r0.top < 30, h0: r0.height };
     }, { passive: true });
     sh.addEventListener('touchmove', e => {
       if (!sg) return;
@@ -842,17 +843,30 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       if (!sg.mode) {
         if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
         if (Math.abs(dx) > Math.abs(dy)) { sg = null; return; }   // 영상 줄 같은 가로 스크롤은 건드리지 않는다
-        if (sstate === 'mid') sg.mode = dy < 0 ? 'up' : 'down';
+        if (sg.handle) sg.mode = 'handle';   // 손잡이는 어느 상태에서든 창을 잡고 끌 수 있다
+        else if (sstate === 'mid') sg.mode = dy < 0 ? 'up' : 'down';
         else sg.mode = (dy > 0 && sg.top <= 0 && sh.scrollTop <= 0) ? 'down' : 'scroll';
       }
       if (sg.mode === 'scroll') return;
       if (e.cancelable) e.preventDefault();
       sg.dy = dy;
-      if (sg.mode === 'up') sh.style.height = Math.max(midH(), Math.min(fullH(), midH() - dy)) + 'px';
+      if (sg.mode === 'handle') {
+        const want = sg.h0 - dy, h = Math.max(midH(), Math.min(fullH(), want));
+        sh.style.height = h + 'px';
+        sh.style.transform = want < midH() ? 'translateY(' + (midH() - want) + 'px)' : '';
+      } else if (sg.mode === 'up') sh.style.height = Math.max(midH(), Math.min(fullH(), midH() - dy)) + 'px';
       else sh.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
     }, { passive: false });
     const end = cancel => {
+      if (sg && sg.handle && !sg.mode && !cancel && Date.now() - sg.t < 400) { sg = null; setSheetState(sstate === 'mid' ? 'full' : 'mid', true); return; }   // 막대를 톡 누르면 크기 전환
       if (!sg || !sg.mode || sg.mode === 'scroll') { sg = null; return; }
+      if (sg.mode === 'handle') {
+        const dy = sg.dy, want = sg.h0 - dy, c = cancel;
+        sg = null;
+        if (!c && want < midH() * 0.6) { dismissSheet(); return; }
+        setSheetState(c ? sstate : (dy < -30 ? 'full' : dy > 30 ? 'mid' : (want > (midH() + fullH()) / 2 ? 'full' : 'mid')), true);
+        return;
+      }
       const dy = sg.dy, v = Math.abs(dy) / Math.max(1, Date.now() - sg.t), m = sg.mode;
       sg = null;
       if (m === 'up') setSheetState(!cancel && (-dy > 50 || (v > 0.5 && -dy > 20)) ? 'full' : 'mid', true);
