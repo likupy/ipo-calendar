@@ -996,5 +996,31 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    for nm, no, rc in (("하나에어로", "2334", "20261109000166"), ("덕산넵코어스", "2309", "20260915000084"), ("디티에스", "2326", "20261012000323"), ("옵토닉스", "2338", "20261029000524")):
+        r = {}
+        try:
+            t = text_of(get(DETAIL.format(no)))
+            r["38"] = [t[max(0, m.start() - 100):m.start() + 300] for m in list(re.finditer("유통가능|보호예수", t))[:2]]
+        except Exception as ex:
+            r["38"] = str(ex)
+        try:
+            t = fetch_doc_text(rc)
+            r["len"] = len(t)
+            hits = [m.start() for m in re.finditer("유통가능", t)]
+            r["n_hits"] = len(hits)
+            r["dart"] = [t[max(0, h - 150):h + 450] for h in hits[:3]]
+        except Exception as ex:
+            r["dart"] = str(ex)
+        out[nm] = r
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
