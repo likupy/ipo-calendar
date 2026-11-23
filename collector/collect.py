@@ -958,5 +958,22 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    for nm, rc in (("디티에스", "20261016000472"), ("빅웨이브로보틱스", "20260918000412")):
+        try:
+            t = fetch_doc_text(rc)
+            i = t.find("일반투자자 배정방식별")
+            out[nm] = t[i:i + 3500] if i >= 0 else t[:200]
+        except Exception as ex:
+            out[nm] = str(ex)
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
