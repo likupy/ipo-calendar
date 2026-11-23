@@ -495,6 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
+EXT_VER = 2
 YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
@@ -543,12 +544,12 @@ def parse_ext38(t, brokers):
 def parse_report(t):
     """증권발행실적보고서: 기관 배정 중 미확약 수량, 일반청약 결과(청약 건수·수량, 균등/비례 물량)."""
     f = {}
-    m = re.search(r"미확약\s+([\d,.\- ]+?)\s+계\s+([\d,.\- ]+)", t)
-    if m:
-        a = re.findall(r"[\d,]+(?:\.\d+)?", m.group(1))
-        b = re.findall(r"[\d,]+(?:\.\d+)?", m.group(2))
-        if "100.00" in b and b.index("100.00") >= 1 and len(a) >= 2:
-            f["inst"], f["unlock"] = num(b[b.index("100.00") - 1]), num(a[-2])
+    m = re.search(r"미확약\s+((?:[\d,]+(?:\.\d+)?\s+|-\s+){14})계\s+((?:[\d,]+(?:\.\d+)?\s+|-\s+){14})", t)
+    if m:   # 7개 열(기관 유형 6 + 합계) × (수량, 비중)
+        a = re.findall(r"[\d,]+(?:\.\d+)?|-", m.group(1))
+        b = re.findall(r"[\d,]+(?:\.\d+)?|-", m.group(2))
+        if b[13].replace(",", "") in ("100", "100.0", "100.00") and a[12] != "-" and b[12] != "-":
+            f["inst"], f["unlock"] = num(b[12]), num(a[12])
     m = re.search(r"일반투자자\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)", t)
     if m:
         f["gen"], f["n"], f["req"], f["n_fin"], f["got"] = num(m.group(1)), num(m.group(2)), num(m.group(3)), num(m.group(5)), num(m.group(6))
@@ -691,8 +692,10 @@ def enrich(merged, old, alias):
         it = merged.get(iid)
         if not it or it.get("withdrawn") or not it.get("sub"):
             continue
-        if date.fromisoformat(it["sub"][1]) < today - timedelta(days=60) and (old.get(iid) or {}).get("ext"):
-            it["ext"] = old[iid]["ext"]   # 두 달 지난 종목은 다시 읽지 않는다
+        oe = (old.get(iid) or {}).get("ext") or {}
+        done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
+        if oe.get("v") == EXT_VER and done:
+            it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
         sub0 = date.fromisoformat(it["sub"][0])
@@ -739,6 +742,7 @@ def enrich(merged, old, alias):
             log(f"  영상 {it['name']}: 후보 {len(cand)}개 → 동영상 {len(keep)}개 (API {'사용' if apikey else '없음'}, 라이브/쇼츠 제외 {sum(1 for i in todo if i not in keep)}개)")
         except Exception as ex:
             log("  YouTube 실패", ex)
+        e["v"] = EXT_VER
         it["ext"] = e
 
 
@@ -953,24 +957,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for nm, rc in (("래블업", "20261027000261"), ("동원파츠", "20261105000056"), ("크리에이츠", "20261023000137"), ("아이엠스팩1호", "20261029000155")):
-        try:
-            t = fetch_doc_text(rc)
-            r = {"len": len(t)}
-            for k in ("미확약", "일반투자자", "균등방식", "일괄청약방식"):
-                r[k] = [t[max(0, m.start() - 150):m.start() + 250] for m in list(re.finditer(k, t))[:2]]
-            out[nm] = r
-        except Exception as ex:
-            out[nm] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
