@@ -799,7 +799,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   /* ---- 폰: 상세창은 처음엔 화면의 2/3, 위로 밀면 크게, 크게 연 상태에서 맨 위일 때 아래로 밀면 닫힘. 뒤로가기는 상세창만 닫음 ---- */
   let sheetPushed = false, pendingBack = 0, sstate = 'mid', sg = null;
   const phoneSheet = () => window.matchMedia('(max-width: 639px)').matches;
-  const midH = () => Math.round(window.innerHeight * 0.63), fullH = () => Math.round(window.innerHeight * 0.95);
+  const midH = () => Math.round(window.innerHeight * 0.65), fullH = () => Math.round(window.innerHeight * 0.95);
   function setSheetState(st, animate) {
     const sh = $('sheet');
     sstate = st;
