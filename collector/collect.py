@@ -998,22 +998,16 @@ def main():
 
 def probe():
     out = {}
-    for nm, no, rc in (("하나에어로", "2334", "20261109000166"), ("덕산넵코어스", "2309", "20260915000084"), ("디티에스", "2326", "20261012000323"), ("옵토닉스", "2338", "20261029000524")):
-        r = {}
-        try:
-            t = text_of(get(DETAIL.format(no)))
-            r["38"] = [t[max(0, m.start() - 100):m.start() + 300] for m in list(re.finditer("유통가능|보호예수", t))[:2]]
-        except Exception as ex:
-            r["38"] = str(ex)
+    for nm, rc in (("하나에어로", "20261109000166"), ("덕산넵코어스", "20260915000084"), ("브릴스", "20260916000240"), ("디티에스", "20261012000323"), ("옵토닉스", "20261029000524"), ("에이엘로봇", "20261104000315")):
         try:
             t = fetch_doc_text(rc)
-            r["len"] = len(t)
-            hits = [m.start() for m in re.finditer("유통가능", t)]
-            r["n_hits"] = len(hits)
-            r["dart"] = [t[max(0, h - 150):h + 450] for h in hits[:3]]
+            rx = r"상장\s*예정\s*주식수[^.]{0,60}?([\d,]{6,})\s*주\s*중\s*(?:약\s*)?([\d.]+)\s*%\s*에\s*해당하는\s*([\d,]+)\s*주는\s*상장\s*직후"
+            ms = [(t[max(0, m.start() - 60):m.start()].replace("\n", " "), m.group(1), m.group(2), m.group(3)) for m in re.finditer(rx, t)]
+            rx2 = r"([\d,]+)\s*주\s*\(\s*([\d.]+)\s*%\s*\)\s*는\s*상장\s*직후\s*시장에서\s*유통"
+            ms2 = [(t[max(0, m.start() - 160):m.start()].replace("\n", " "), m.group(1), m.group(2)) for m in re.finditer(rx2, t)]
+            out[nm] = {"rx": ms, "rx2": ms2}
         except Exception as ex:
-            r["dart"] = str(ex)
-        out[nm] = r
+            out[nm] = str(ex)
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
