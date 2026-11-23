@@ -240,7 +240,8 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .nitem .nn { font-size: 14.5px; font-weight: 700; }
 .nitem .nx { display: block; margin-top: 2px; font-size: 14px; }
 .nempty { padding: 30px 4px; text-align: center; color: var(--ink-2); font-size: 13.5px; }
-.sheet:not(.noti) { max-height: 88vh; overflow-y: auto; }
+.sheet:not(.noti) { max-height: 88vh; overflow-y: auto; overscroll-behavior: contain; }
+#sheet.snap { transition: height .24s ease, transform .24s ease; }
 .sec { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
 .sec h4 { margin: 0 0 10px; font-size: 13px; font-weight: 700; }
 .bk { margin: 0 0 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--out); }
@@ -771,14 +772,79 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     $('sheetExt').innerHTML = xh.rest;
     $('scrim').hidden = false;
     $('sheet').hidden = false;
+    $('sheet').scrollTop = 0;
+    setSheetState('mid', false);
+    if (!sheetPushed) { try { history.pushState({ sheet: 1 }, ''); sheetPushed = true; } catch (_) {} }
     $('sheetClose').focus();
   }
-  function closeSheet() {
+  function closeSheet(fromPop) {
     $('scrim').hidden = true;
     $('sheet').hidden = true;
+    $('sheet').classList.remove('snap');
+    $('sheet').style.transform = '';
+    if (sheetPushed) {   // 열 때 쌓아 둔 기록을 걷어낸다(뒤로가기로 닫힌 경우는 이미 걷혔다)
+      sheetPushed = false;
+      if (fromPop !== true) { pendingBack++; try { history.back(); } catch (_) { pendingBack--; } }
+    }
     if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
     lastFocus = null;
   }
+
+  /* ---- 폰: 상세창은 처음엔 화면의 2/3, 위로 밀면 크게, 크게 연 상태에서 맨 위일 때 아래로 밀면 닫힘. 뒤로가기는 상세창만 닫음 ---- */
+  let sheetPushed = false, pendingBack = 0, sstate = 'mid', sg = null;
+  const phoneSheet = () => window.matchMedia('(max-width: 639px)').matches;
+  const midH = () => Math.round(window.innerHeight * 0.66), fullH = () => Math.round(window.innerHeight * 0.88);
+  function setSheetState(st, animate) {
+    const sh = $('sheet');
+    sstate = st;
+    if (!phoneSheet()) { sh.style.height = ''; sh.style.transform = ''; return; }
+    if (animate) { sh.classList.add('snap'); setTimeout(() => sh.classList.remove('snap'), 280); }
+    sh.style.height = (st === 'full' ? fullH() : midH()) + 'px';
+    sh.style.transform = '';
+  }
+  function dismissSheet() {
+    const sh = $('sheet');
+    sh.classList.add('snap');
+    sh.style.transform = 'translateY(100%)';
+    setTimeout(() => closeSheet(), 240);
+  }
+  window.addEventListener('popstate', () => {
+    if (pendingBack > 0) { pendingBack--; return; }
+    if (!$('sheet').hidden) { sheetPushed = false; closeSheet(true); }
+  });
+  (function () {
+    const sh = $('sheet');
+    sh.addEventListener('touchstart', e => {
+      if (!phoneSheet() || e.touches.length !== 1 || zoomed()) { sg = null; return; }
+      const t = e.touches[0];
+      sg = { x: t.clientX, y: t.clientY, top: sh.scrollTop, mode: null, t: Date.now(), dy: 0 };
+    }, { passive: true });
+    sh.addEventListener('touchmove', e => {
+      if (!sg) return;
+      const t = e.touches[0], dx = t.clientX - sg.x, dy = t.clientY - sg.y;
+      if (!sg.mode) {
+        if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+        if (Math.abs(dx) > Math.abs(dy)) { sg = null; return; }   // 영상 줄 같은 가로 스크롤은 건드리지 않는다
+        if (sstate === 'mid') sg.mode = dy < 0 ? 'up' : 'down';
+        else sg.mode = (dy > 0 && sg.top <= 0 && sh.scrollTop <= 0) ? 'down' : 'scroll';
+      }
+      if (sg.mode === 'scroll') return;
+      if (e.cancelable) e.preventDefault();
+      sg.dy = dy;
+      if (sg.mode === 'up') sh.style.height = Math.max(midH(), Math.min(fullH(), midH() - dy)) + 'px';
+      else sh.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    }, { passive: false });
+    const end = cancel => {
+      if (!sg || !sg.mode || sg.mode === 'scroll') { sg = null; return; }
+      const dy = sg.dy, v = Math.abs(dy) / Math.max(1, Date.now() - sg.t), m = sg.mode;
+      sg = null;
+      if (m === 'up') setSheetState(!cancel && (-dy > 50 || (v > 0.5 && -dy > 20)) ? 'full' : 'mid', true);
+      else if (!cancel && (dy > 90 || (v > 0.6 && dy > 30))) dismissSheet();
+      else setSheetState(sstate, true);
+    };
+    sh.addEventListener('touchend', () => end(false), { passive: true });
+    sh.addEventListener('touchcancel', () => end(true), { passive: true });
+  })();
 
   /* ---- alerts (bell): schedule changes / withdrawals on one tab, newly confirmed info on the other ---- */
   const SEEN_KEY = 'ipo-noti-seen';
