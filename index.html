@@ -689,13 +689,14 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     if (p.spac) h = '';   // 스팩은 수요예측이 없어 공모 지표를 보여주지 않는다
     const base = h;
     h = '<div class="sec"><h4>최종 경쟁률</h4><div class="xfin">';
-    if (f && f.n_fin && f.req != null && f.gen && f.eq && f.pr && p.brokers.length === 1 && p.margin && p.price != null) {
-      const b = p.brokers[0], nm = BN[b] || (b + '증권');
-      {
-        const per = Math.round(+(f.req / f.pr).toFixed(2) * p.price * p.margin / 100);
-        h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr><tr><td>' + esc(nm) + '</td><td>' + f2(f.eq / f.n_fin) + '주</td><td>' + fmt(per) + '원</td></tr></table>' +
-          '';
-      }
+    const rowsFin = [];
+    if (p.margin && p.price != null) {
+      if (f && f.n_fin && f.req != null && f.gen && f.eq && f.pr && p.brokers.length === 1) rowsFin.push([p.brokers[0], f.eq / f.n_fin, f.req / f.pr]);
+      else if (e.fin_b && p.brokers.length > 1 && p.brokers.every(b => e.fin_b[b] && e.fin_b[b].n && e.fin_b[b].pr)) p.brokers.forEach(b => rowsFin.push([b, e.fin_b[b].eq / e.fin_b[b].n, e.fin_b[b].req / e.fin_b[b].pr]));
+    }
+    if (rowsFin.length) {
+      h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr>' + rowsFin.map(r =>
+        '<tr><td>' + esc(BN[r[0]] || (r[0] + '증권')) + '</td><td>' + f2(r[1]) + '주</td><td>' + fmt(Math.round(+r[2].toFixed(2) * p.price * p.margin / 100)) + '원</td></tr>').join('') + '</table>';
     } else if (f) {
       h += '<div class="w">증권사별 결과는 공시를 확인한 뒤 표시돼요.</div>';
     } else if (ended) {

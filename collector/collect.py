@@ -495,7 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
-EXT_VER = 3
+EXT_VER = 4
 YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
@@ -733,9 +733,18 @@ def enrich(merged, old, alias):
                 if reps:
                     e["dart"] = reps
                 if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
-                    f = parse_report(fetch_doc_text(reps["실적"]))
+                    rtxt = fetch_doc_text(reps["실적"])
+                    f = parse_report(rtxt)
+                    e.pop("fin_b", None)
                     if f:
                         e["fin"], e["fin_rc"] = f, reps["실적"]
+                        if len(it["brokers"]) > 1:
+                            fb = parse_report_brokers(rtxt, it["brokers"])
+                            # 증권사별 값을 모두 더하면 보고서 전체 값과 같아야 한다. 다르면 쓰지 않는다.
+                            if fb and f.get("req") and sum(v["req"] for v in fb.values()) == f["req"] and sum(v["eq"] for v in fb.values()) == f.get("eq") and sum(v["pr"] for v in fb.values()) == f.get("pr"):
+                                e["fin_b"] = fb
+                            else:
+                                log("  증권사별 최종 경쟁률 검증 실패", it["name"])
                     else:
                         e.pop("fin", None); e.pop("fin_rc", None)
                         log("  실적보고서 표를 못 읽음", it["name"], reps["실적"])
