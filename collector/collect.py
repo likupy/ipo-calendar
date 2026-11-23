@@ -495,7 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
-EXT_VER = 2
+EXT_VER = 3
 YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
@@ -548,7 +548,7 @@ def parse_report(t):
     if m:   # 7개 열(기관 유형 6 + 합계) × (수량, 비중)
         a = re.findall(r"[\d,]+(?:\.\d+)?|-", m.group(1))
         b = re.findall(r"[\d,]+(?:\.\d+)?|-", m.group(2))
-        if b[13].replace(",", "") in ("100", "100.0", "100.00") and a[12] != "-" and b[12] != "-":
+        if b[13].replace(",", "") in ("100", "100.0", "100.00") and a[12] != "-" and b[12] != "-" and num(a[12]) <= num(b[12]):
             f["inst"], f["unlock"] = num(b[12]), num(a[12])
     m = re.search(r"일반투자자\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)\s+([\d,]+)\s+[\d.]+\s+([\d,]+)\s+([\d,]+)", t)
     if m:
@@ -713,11 +713,12 @@ def enrich(merged, old, alias):
                 reps = dart_reports(e["corp"], sub0)
                 if reps:
                     e["dart"] = reps
-                if reps.get("실적") and e.get("fin_rc") != reps["실적"]:
+                if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
                     f = parse_report(fetch_doc_text(reps["실적"]))
                     if f:
                         e["fin"], e["fin_rc"] = f, reps["실적"]
                     else:
+                        e.pop("fin", None); e.pop("fin_rc", None)
                         log("  실적보고서 표를 못 읽음", it["name"], reps["실적"])
         except Exception as ex:
             log("  DART 확장 실패", it["name"], ex)
