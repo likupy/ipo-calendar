@@ -964,7 +964,9 @@ def probe():
             out[nm] = r
         except Exception as ex:
             out[nm] = str(ex)
-    json.dump(out, open("docs/data/probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
