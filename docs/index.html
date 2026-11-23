@@ -257,6 +257,11 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 @media (max-width: 639px) {
   #sheet .grab { display: block; position: absolute; top: 7px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--ink-2); opacity: .4; }
 }
+.sheet:not(.noti)::-webkit-scrollbar { width: 12px; }
+.sheet:not(.noti)::-webkit-scrollbar-track { background: transparent; margin: 18px 0; }
+.sheet:not(.noti)::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 3px solid transparent; background-clip: padding-box; }
+.sheet:not(.noti)::-webkit-scrollbar-button { display: none; }
+@supports (-moz-appearance: none) { .sheet:not(.noti) { scrollbar-width: thin; scrollbar-color: var(--line) transparent; } }
 #sheet.snap { transition: height .24s ease, transform .24s ease; }
 .sec { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
 .sec h4 { margin: 0 0 10px; font-size: 13px; font-weight: 700; }
