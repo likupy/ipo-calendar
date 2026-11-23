@@ -495,7 +495,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
 
 
 # ---------------------------------------------------------------- 상세창 확장(일부 종목에 먼저 적용)
-EXT_VER = 4
+EXT_VER = 5
 YT_HANDLE2 = "공모주투자_0301"   # 앞으로 나올 종목 영상이 올라올 두 번째 채널
 YT_CHANNEL = "UCstq1xNCuEIR43dM3CMop3g"   # 공모주투자의법칙
 
@@ -510,7 +510,7 @@ def parse_ext38(t, brokers):
     m = re.search(r"수요예측일\s*(\d{4})\.(\d\d)\.(\d\d)\s*~\s*(\d{4})\.(\d\d)\.(\d\d)", t)
     if m:
         e["dem_dates"] = [iso(to_date(*m.groups()[:3])), iso(to_date(*m.groups()[3:]))]
-    m = re.search(r"기관경쟁률\s*([\d,]+(?:\.\d+)?)\s*:\s*1", t)
+    m = re.search(r"기관경쟁률\s*([\d,]+(?:\.\d+)?)(?:\s*:\s*1)?", t)
     if m:
         e["comp"] = float(m.group(1).replace(",", ""))
     m = re.search(r"구분\s*신청수량\(단위:주\)(.*?)합계\s*([\d,]+)\s*총\s*수량\s*대비\s*비율\(%\)\s*([\d.]+)\s*%", t)
@@ -986,24 +986,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for nm, no in (("하나에어로", "2334"), ("덕산넵코어스", "2309"), ("디티에스", "2326"), ("래블업", "2335"), ("엠비디", "2321")):
-        try:
-            t = text_of(get(DETAIL.format(no)))
-            r = {"len": len(t)}
-            for k in ("공모 후", "기관투자자등", "기관경쟁률", "의무보유"):
-                r[k] = [t[max(0, m.start() - 60):m.start() + 330] for m in list(re.finditer(k, t))[:2]]
-            out[nm] = r
-        except Exception as ex:
-            out[nm] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()

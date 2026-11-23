@@ -676,7 +676,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const preLk = hasDem && e.lock_pct != null;
     const preFl = preLk && calc && e.apply_qty && e.lock_qty != null ? (e.free - e.inst * e.lock_qty / e.apply_qty) * p.price : null;
     const lk1 = fin ? (f.inst - f.unlock) / f.inst * 100 : null;
-    const fl1 = fin && calc ? (e.free - (f.inst - f.unlock)) * p.price : null;
+    const fl1 = fin && e.free && p.price != null ? (e.free - (f.inst - f.unlock)) * p.price : null;
     let h = '<div class="sec"><h4>공모 지표</h4>';
     const dw = e.dem_dates ? '수요예측(' + md(e.dem_dates[0]) + '~' + md(e.dem_dates[1]) + ') 결과가 공시되면 표시돼요.' : '수요예측 결과가 공시되면 표시돼요.';
     h += '<div class="xcd"><div class="lb">기관 수요예측 경쟁률</div>' + (hasDem ? '<div class="bg">' + f2(e.comp) + '<small>: 1</small></div><div class="ex">기관 투자자 신청이 공모 물량의 약 ' + fmt(Math.round(e.comp)) + '배였어요.</div>' : '<div class="bg none">결과 대기</div><div class="ex">' + dw + '</div>') + '</div>';
@@ -687,12 +687,13 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     h += '<div class="ex">기관이 일정 기간 팔지 않겠다고 약속한 비율이에요.</div></div>';
     h += '<div class="xcd"><div class="lb">유통가능금액</div>';
     if (fl1 != null && preFl != null) h += '<div class="bg">' + fmt(Math.round(fl1 / 1e8)) + '<small>억원</small></div><div class="chg">수요예측 후 ' + eok(preFl) + ' <span>→</span> <b>' + eok(fl1) + '</b></div>';
+    else if (fl1 != null) h += '<div class="bg">' + fmt(Math.round(fl1 / 1e8)) + '<small>억원</small></div>';
     else if (preFl != null) h += '<div class="bg">' + fmt(Math.round(preFl / 1e8)) + '<small>억원</small></div>' + wt('수요예측 후 · ' + post);
     else h += '<div class="bg none">결과 대기</div>' + wt('수요예측 후 표시돼요.');
     h += '<div class="ex">상장 직후 시장에서 거래될 수 있는 주식의 금액이에요. (확약 반영)</div></div>';
     h += '<p class="note">공시 기준 참고용이에요. 유통가능금액은 계산한 값이에요.</p></div>';
     /* 최종 경쟁률 */
-    if (p.spac) h = '';   // 스팩은 수요예측이 없어 공모 지표를 보여주지 않는다
+    if (p.spac || !hasDem) h = '';   // 스팩은 수요예측이 없고, 수요예측 결과가 나오기 전엔 공모 지표를 보여주지 않는다
     const base = h;
     h = '<div class="sec"><h4>최종 경쟁률</h4><div class="xfin">';
     const rowsFin = [];
