@@ -977,24 +977,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for nm, rc, br in (("디티에스", "20261016000472", ["대신", "유진"]), ("빅웨이브로보틱스", "20260918000412", ["유진", "미래"]), ("엘리스그룹", "20261013000356", ["미래", "삼성"])):
-        try:
-            t = fetch_doc_text(rc)
-            r = parse_report_brokers(t, br)
-            f = parse_report(t)
-            out[nm] = {"brokers": r, "total_req": f.get("req"), "sum_req": sum(v["req"] for v in r.values()), "total_eq": f.get("eq"), "sum_eq": sum(v["eq"] for v in r.values()), "total_pr": f.get("pr"), "sum_pr": sum(v["pr"] for v in r.values()), "n_fin": f.get("n_fin"), "sum_n": sum(v["n"] for v in r.values()),
-                       "hdr": re.findall(r"\[[^\[\]]{2,14}\]", t)[:8], "sum_rows": [t[m.start():m.start() + 160] for m in re.finditer("합계", t)][:6]}
-        except Exception as ex:
-            out[nm] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
