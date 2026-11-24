@@ -1065,5 +1065,21 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    for k, r in (("sul", "20261117000116"), ("sin", "20261117000109"), ("rep", "20261123000249")):
+        try:
+            t = fetch_doc_text(r)
+            out[k] = [t[max(0, m.start() - 150):m.start() + 250].replace("\n", " ") for m in re.finditer(r"균등\s*(?:방식|배정)[^.]{0,40}(?:\d+(?:\.\d+)?\s*%|비율)", t)][:5]
+        except Exception as ex:
+            out[k] = str(ex)[:150]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
