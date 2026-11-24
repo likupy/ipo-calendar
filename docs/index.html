@@ -630,14 +630,14 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const availH = window.innerHeight * k - px(cs.paddingTop) - px(cs.paddingBottom);
 
     if (!mob) {
-      /* PC: title, buttons and footer keep their real size at a fixed width; only the calendar scales so the month fits the window height */
+      /* PC: title, buttons and footer keep their real size at a fixed width; only the calendar scales so the month fits the window height at the zoom the page loaded at (browser zoom afterwards enlarges it and the page scrolls) */
       root.classList.remove('compact'); $('tail').style.height = '0px';
       wrap.style.transform = ''; stage.style.height = '';
       const W = Math.max(DW_MIN, Math.min(DW, root.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight)));
       stage.style.width = W + 'px'; wrap.style.width = W + 'px';
       cstage.style.height = '0px'; cscale.style.transform = ''; cscale.style.width = W + 'px';
       const chrome = wrap.offsetHeight;
-      const room = window.innerHeight - px(cs.paddingTop) - px(cs.paddingBottom) - chrome - 1;
+      const room = window.innerHeight * k - px(cs.paddingTop) - px(cs.paddingBottom) - chrome - 1;
       let sc = Math.max(0.4, Math.min(1, room / (cscale.offsetHeight || 1)));
       for (let i = 0; i < 2; i++) {
         cscale.style.width = (W / sc) + 'px';
