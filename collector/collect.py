@@ -597,6 +597,16 @@ def parse_free_doc(t):
     return best
 
 
+def parse_eq_ratio(t):
+    """투자설명서·증권신고서의 '균등배정 물량(일반청약자 배정물량의 N%)' 에서 균등 비율(0~1). 서로 다른 값이 섞여 있으면 읽지 않는다."""
+    vals = set(re.findall(r"균등\s*배정\s*물량\s*\(\s*일반\s*청약자\s*배정\s*물량의\s*([\d.]+)\s*%\s*\)", t))
+    if len(vals) == 1:
+        v = float(vals.pop())
+        if 0 < v <= 100:
+            return v / 100
+    return None
+
+
 def find_corp(name, sub0):
     end = sub0
     bgn = sub0 - timedelta(days=75)
@@ -736,7 +746,7 @@ def enrich(merged, old, alias):
             continue
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
-        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")):
+        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (oe.get("eq_r") is not None or oe.get("eq_tried") or not oe.get("fin")):
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -776,6 +786,19 @@ def enrich(merged, old, alias):
                             e["inst"] = num(dm[-1])
                         else:
                             log("  기관 배정 수량을 못 읽음", it["name"])
+                if reps.get("설명서") and reps.get("실적") and e.get("eq_r") is None and not e.get("eq_tried"):
+                    try:
+                        qtxt = fetch_doc_text(reps["설명서"])
+                    except Exception as ex2:
+                        qtxt = None
+                        log("  균등 비율: 투자설명서 읽기 실패(다음에 재시도)", it["name"], ex2)
+                    if qtxt is not None:
+                        e["eq_tried"] = 1
+                        er = parse_eq_ratio(qtxt)
+                        if er is not None:
+                            e["eq_r"] = er
+                        else:
+                            log("  균등 비율을 못 읽음", it["name"])
                 if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
                     rtxt = fetch_doc_text(reps["실적"])
                     f = parse_report(rtxt)
@@ -1065,21 +1088,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for k, r in (("sul", "20261117000116"), ("sin", "20261117000109"), ("rep", "20261123000249")):
-        try:
-            t = fetch_doc_text(r)
-            out[k] = [t[max(0, m.start() - 150):m.start() + 250].replace("\n", " ") for m in re.finditer(r"균등\s*(?:방식|배정)[^.]{0,40}(?:\d+(?:\.\d+)?\s*%|비율)", t)][:5]
-        except Exception as ex:
-            out[k] = str(ex)[:150]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
