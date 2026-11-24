@@ -541,6 +541,17 @@ def parse_ext38(t, brokers):
     return e
 
 
+def plan_eq(t, eq):
+    """균등방식으로 배정하기로 했던 물량. 공시가 '일반배정물량 N주 중 M주(X%)를 균등방식…' 또는 '총 M주를 균등배정하였습니다'로 밝힌 경우 그 값, 밝힌 게 없으면 실제 균등 배정 수량."""
+    vals = {num(m) for m in re.findall(r"일반\s*배정\s*물량\s*[\d,]+\s*주\s*중\s*([\d,]+)\s*주\s*\([\d.]+\s*%\)\s*를\s*균등\s*방식", t)}
+    vals |= {num(m) for m in re.findall(r"총\s*([\d,]+)\s*주를\s*균등\s*배정\s*하였습니다", t)}
+    if len(vals) == 1:
+        v = vals.pop()
+        if v >= eq:
+            return v
+    return eq
+
+
 def parse_report(t):
     """증권발행실적보고서: 기관 배정 중 미확약 수량, 일반청약 결과(청약 건수·수량, 균등/비례 물량)."""
     f = {}
@@ -556,6 +567,7 @@ def parse_report(t):
     m = re.search(r"균등방식\s+([\d,]+)\s+[\d.]+\s+일괄청약방식\s+비례방식\s+([\d,]+)", t)
     if m:
         f["eq"], f["pr"] = num(m.group(1)), num(m.group(2))
+        f["eq_p"] = plan_eq(t, f["eq"])
     return f if "unlock" in f else {}
 
 
@@ -574,7 +586,7 @@ def parse_report_brokers(t, brokers):
         tk = re.findall(r"[\d,]+(?:\.\d+)?%?|-", m.group(1))
         if "-" in (tk[0], tk[1], tk[6], tk[11]):
             continue
-        out[key] = {"n": num(tk[0]), "req": num(tk[1]), "eq": num(tk[6]), "pr": num(tk[11])}
+        out[key] = {"n": num(tk[0]), "req": num(tk[1]), "eq": num(tk[6]), "pr": num(tk[11]), "eq_p": plan_eq(seg, num(tk[6]))}
     return out if len(out) == len(brokers) else {}
 
 
@@ -595,16 +607,6 @@ def parse_free_doc(t):
     for m in re.finditer(r"([\d,]+)\s*주\s*\(\s*([\d.]+)\s*%\s*\)\s*는\s*상장\s*직후\s*시장에서\s*유통", t):
         best = {"free": num(m.group(1))}
     return best
-
-
-def parse_eq_ratio(t):
-    """투자설명서·증권신고서의 '균등배정 물량(일반청약자 배정물량의 N%)' 에서 균등 비율(0~1). 서로 다른 값이 섞여 있으면 읽지 않는다."""
-    vals = set(re.findall(r"균등\s*배정\s*물량\s*\(\s*일반\s*청약자\s*배정\s*물량의\s*([\d.]+)\s*%\s*\)", t))
-    if len(vals) == 1:
-        v = float(vals.pop())
-        if 0 < v <= 100:
-            return v / 100
-    return None
 
 
 def find_corp(name, sub0):
@@ -746,7 +748,7 @@ def enrich(merged, old, alias):
             continue
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
-        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (oe.get("eq_r") is not None or oe.get("eq_tried") or not oe.get("fin")):
+        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or "eq_p" in oe["fin"]):
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -786,20 +788,7 @@ def enrich(merged, old, alias):
                             e["inst"] = num(dm[-1])
                         else:
                             log("  기관 배정 수량을 못 읽음", it["name"])
-                if reps.get("설명서") and reps.get("실적") and e.get("eq_r") is None and not e.get("eq_tried"):
-                    try:
-                        qtxt = fetch_doc_text(reps["설명서"])
-                    except Exception as ex2:
-                        qtxt = None
-                        log("  균등 비율: 투자설명서 읽기 실패(다음에 재시도)", it["name"], ex2)
-                    if qtxt is not None:
-                        e["eq_tried"] = 1
-                        er = parse_eq_ratio(qtxt)
-                        if er is not None:
-                            e["eq_r"] = er
-                        else:
-                            log("  균등 비율을 못 읽음", it["name"])
-                if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
+                if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER or "eq_p" not in (e.get("fin") or {})):
                     rtxt = fetch_doc_text(reps["실적"])
                     f = parse_report(rtxt)
                     e.pop("fin_b", None)
@@ -1088,22 +1077,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    sel = json.load(open("collector/sel.json"))
-    for n, r in sel.items():
-        try:
-            t = fetch_doc_text(r)
-            out[n] = [t[max(0, m.start() - 120):m.start() + 160].replace("\n", " ") for m in re.finditer(r"균등", t)][:4]
-        except Exception as ex:
-            out[n] = str(ex)[:100]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
