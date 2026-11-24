@@ -1022,5 +1022,24 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    import urllib.request
+    out = {}
+    for k, u in [("page", "https://stock.naver.com/ipo/A0231Y0"), ("m", "https://m.stock.naver.com/ipo/A0231Y0"), ("api1", "https://m.stock.naver.com/api/ipo/A0231Y0"), ("api2", "https://api.stock.naver.com/ipo/A0231Y0"), ("api3", "https://m.stock.naver.com/front-api/ipo/A0231Y0")]:
+        try:
+            r = urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"}), timeout=25)
+            t = r.read().decode("utf-8", "replace")
+            i = t.find("12.03")
+            out[k] = {"len": len(t), "ct": r.headers.get("content-type"), "head": t[:300], "hit": [t[max(0, m.start() - 150):m.start() + 100] for m in re.finditer(r"상장|listing|12[.\-/]0?3", t)][:6], "apis": sorted(set(re.findall(r"https?://[\w./-]*(?:api|front)[\w./?=&-]*", t)))[:15]}
+        except Exception as ex:
+            out[k] = str(ex)[:150]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
