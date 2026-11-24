@@ -1027,19 +1027,14 @@ def probe():
     import urllib.request
     def post(u, data):
         rq = urllib.request.Request(u, data=urllib.parse.urlencode(data).encode(), headers={"User-Agent": "Mozilla/5.0", "Content-Type": "application/x-www-form-urlencoded", "Referer": "https://kind.krx.co.kr/"})
-        return urllib.request.urlopen(rq, timeout=30).read().decode("utf-8", "replace")
-    tests = [
-        ("pub_get", lambda: get("https://kind.krx.co.kr/listinvstg/pubofrprogcom.do?method=searchPubofrProgComMain")),
-        ("pub_post", lambda: post("https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", {"method": "searchPubofrProgComSub", "currentPageSize": "50", "pageIndex": "1", "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_down", "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "", "marketType": "", "beginDate": "2026-11-01", "endDate": "2026-12-31"})),
-        ("new_list", lambda: get("https://kind.krx.co.kr/listinvstg/listingcompany.do?method=searchListingCompanyMain")),
-    ]
-    for k, fn in tests:
-        try:
-            t = fn()
-            tx = re.sub(r"<[^>]+>", " ", t); tx = re.sub(r"\s+", " ", tx)
-            out[k] = {"len": len(t), "head": tx[:300], "hits": [tx[max(0, m.start() - 150):m.start() + 250] for m in list(re.finditer("신영|스팩", tx))[:3]]}
-        except Exception as ex:
-            out[k] = str(ex)[:200]
+        return urllib.request.urlopen(rq, timeout=30).read().decode("euc-kr", "replace")
+    try:
+        t = post("https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", {"method": "searchPubofrProgComSub", "currentPageSize": "100", "pageIndex": "1", "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_down", "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "", "marketType": "", "beginDate": "2026-09-01", "endDate": "2026-12-31"})
+        out["head"] = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t[:t.find("</thead>")]))[:600]
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
+        out["rows"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).replace("&nbsp;", "").strip()[:230] for r in rows][:80]
+    except Exception as ex:
+        out["err"] = str(ex)[:300]
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
