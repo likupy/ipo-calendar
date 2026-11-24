@@ -1051,5 +1051,26 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = text_of(get(DETAIL.format("2335"), timeout=30))
+        out["i38"] = [t[max(0, m.start() - 250):m.start() + 350] for m in re.finditer(r"기관투자자등|1,569,600|1,577,430|1,536,795", t)][:6]
+    except Exception as ex:
+        out["i38"] = str(ex)[:150]
+    for k, r in (("sul", "20261021000341"), ("sin", "20261021000334")):
+        try:
+            t = fetch_doc_text(r)
+            out[k] = [t[max(0, m.start() - 200):m.start() + 250].replace("\n", " ") for m in re.finditer(r"1,569,600|1,536,795|1,577,430", t)][:5]
+        except Exception as ex:
+            out[k] = str(ex)[:150]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
