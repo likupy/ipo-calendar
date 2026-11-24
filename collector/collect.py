@@ -1022,29 +1022,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    import urllib.request
-    try:
-        t = fetch_doc_text("20261123000373")
-        out["len"] = len(t)
-        out["lst"] = [t[max(0, m.start() - 120):m.start() + 220].replace("\n", " ") for m in list(re.finditer(r"상장\s*(?:예정)?\s*(?:일|기일)|12\s*[월.]\s*0?3\s*일?", t))[:8]]
-    except Exception as ex:
-        out["lst"] = str(ex)[:200]
-    try:
-        rq = urllib.request.Request("https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", data=urllib.parse.urlencode({"method": "searchPubofrProgComSub", "currentPageSize": "20", "pageIndex": "1", "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_down", "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "", "marketType": "", "beginDate": "2026-11-01", "endDate": "2026-12-31"}).encode(), headers={"User-Agent": "Mozilla/5.0", "Content-Type": "application/x-www-form-urlencoded", "Referer": "https://kind.krx.co.kr/"})
-        t = urllib.request.urlopen(rq, timeout=30).read().decode("euc-kr", "replace")
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
-        out["kind"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).replace("&nbsp;", "").strip()[:200] for r in rows][:8]
-    except Exception as ex:
-        out["kind"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
