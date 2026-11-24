@@ -1022,45 +1022,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    import urllib.request
-    out = {}
-    def get(u):
-        return urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"}), timeout=25).read().decode("utf-8", "replace")
-    def txt(h):
-        return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", h)).strip()
-    try:
-        t = get("https://stock.naver.com/ipo/A0231Y0")
-        i = t.find("IpoDetailSchedule")
-        out["sched"] = txt(t[i - 200:i + 4000])[:700]
-        out["body"] = txt(t[t.find("<body"):])[:1500]
-        out["nd"] = [m for m in re.findall(r'"(?:listingDate|listDate|listing\w*)"\s*:\s*"?[^,}]{0,30}', t)][:10]
-    except Exception as ex:
-        out["sched"] = str(ex)[:150]
-    try:
-        t = get("https://stock.naver.com/ipo")
-        codes = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})", t)))
-        out["codes"] = codes[:60]
-        out["list"] = txt(t[t.find("<body"):])[:1500]
-        res = {}
-        for c in codes[:14]:
-            try:
-                h = get("https://stock.naver.com/ipo/" + c)
-                sc = re.findall(r"IpoDetailSchedule_text[^>]*>([^<]*)</span><span[^>]*>([^<]*)<", h)
-                nm = re.findall(r"<title>([^<]*)</title>", h)
-                res[c] = [nm[:1], sc]
-            except Exception as ex:
-                res[c] = str(ex)[:60]
-        out["res"] = res
-    except Exception as ex:
-        out["codes"] = str(ex)[:150]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
