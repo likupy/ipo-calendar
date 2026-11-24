@@ -1022,26 +1022,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    import urllib.request
-    def post(u, data):
-        rq = urllib.request.Request(u, data=urllib.parse.urlencode(data).encode(), headers={"User-Agent": "Mozilla/5.0", "Content-Type": "application/x-www-form-urlencoded", "Referer": "https://kind.krx.co.kr/"})
-        return urllib.request.urlopen(rq, timeout=30).read().decode("euc-kr", "replace")
-    try:
-        t = post("https://kind.krx.co.kr/listinvstg/pubofrprogcom.do", {"method": "searchPubofrProgComSub", "currentPageSize": "100", "pageIndex": "1", "orderMode": "1", "orderStat": "D", "forward": "pubofrprogcom_down", "searchMode": "", "searchCodeType": "", "searchCorpName": "", "repIsuSrtCd": "", "marketType": "", "beginDate": "2026-09-01", "endDate": "2026-12-31"})
-        out["head"] = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t[:t.find("</thead>")]))[:600]
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S)
-        out["rows"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).replace("&nbsp;", "").strip()[:230] for r in rows][:80]
-    except Exception as ex:
-        out["err"] = str(ex)[:300]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
