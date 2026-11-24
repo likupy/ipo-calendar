@@ -712,8 +712,8 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     h = '<div class="sec"><h4>최종 경쟁률</h4><div class="xfin">';
     const rowsFin = [];
     if (p.margin && p.price != null) {
-      /* 균등 = 균등 배정 예정 물량 ÷ 청약건수, 비례 1주당 = 경쟁률 × 공모가 × 증거금률 (경쟁률 = 청약수량 ÷ 비례 배정 예정 물량, 청약이 일반 배정 물량에 못 미치면 1) */
-      const one = (b, n, req, eqp, A) => { if (!A || !n || req == null || eqp == null || eqp > A) return null; const pp = A - eqp; return [b, eqp / n, req >= A ? (pp > 0 ? req / pp : null) : 1]; };
+      /* 균등 = 균등 배정 예정 물량 ÷ 청약건수, 비례 1주당 = 경쟁률 × 공모가 × 증거금률 (경쟁률 = 청약수량 ÷ 비례 배정 예정 물량, 청약이 일반 배정 물량 이하면 1) */
+      const one = (b, n, req, eqp, A) => { if (!A || !n || req == null || eqp == null || eqp > A) return null; const pp = A - eqp; return [b, eqp / n, req > A ? (pp > 0 ? req / pp : null) : 1]; };
       /* 일반 배정 물량: 단일 증권사는 실적보고서의 최초 배정, 여러 곳은 38 의 증권사별 배정(없으면 전부 배정된 경우에 한해 균등+비례 배정 합) */
       if (f && (f.n_fin || f.n) && f.req != null && f.eq_p != null && p.brokers.length === 1) { const x = one(p.brokers[0], f.n_fin || f.n, f.req, f.eq_p, f.gen || (e.alloc || {})[p.brokers[0]]); if (x) rowsFin.push(x); }
       else if (e.fin_b && p.brokers.length > 1 && p.brokers.every(b => e.fin_b[b] && e.fin_b[b].n)) { const xs = p.brokers.map(b => { const q = e.fin_b[b]; const A = (e.alloc || {})[b] || (q.req > q.eq + q.pr ? q.eq + q.pr : null); return one(b, q.n, q.req, q.eq_p, A); }); if (xs.every(Boolean)) xs.forEach(x => rowsFin.push(x)); }
