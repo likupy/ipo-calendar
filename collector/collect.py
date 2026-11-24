@@ -613,10 +613,15 @@ def find_corp(name, sub0):
     end = sub0
     bgn = sub0 - timedelta(days=75)
     k = norm(name)
+    sp = is_spac(name)
     for pg in range(1, 12):
         r = call("list.json", bgn_de=bgn.strftime("%Y%m%d"), end_de=end.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=pg, page_count=100)
         for x in r.get("list", []) or []:
             g = norm(x.get("corp_name", ""))
+            if sp:   # 스팩은 이름을 짧게 줄여 맞추면 안 된다(예: 'SK증권스팩14호' 가 증권사 'SK증권' 으로 잘못 연결됨)
+                if is_spac(g) and norm2(g) == norm2(k):
+                    return x["corp_code"]
+                continue
             if g == k or (len(g) >= 3 and (k.startswith(g) or g.startswith(k))):
                 return x["corp_code"]
         if r.get("status") != "000" or pg >= int(r.get("total_page", 1) or 1):
@@ -748,7 +753,7 @@ def enrich(merged, old, alias):
             continue
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
-        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or "eq_p" in oe["fin"]):
+        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or "eq_p" in oe["fin"]) and (not is_spac(it["name"]) or oe.get("corp_v") == 2):
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -759,10 +764,16 @@ def enrich(merged, old, alias):
         except Exception as ex:
             log("  38 확장 실패", it["name"], ex)
         try:
-            if not e.get("corp"):
+            if not e.get("corp") or (is_spac(it["name"]) and e.get("corp_v") != 2):
                 c = find_corp(it["name"], sub0)
+                if is_spac(it["name"]) and e.get("corp_v") != 2:
+                    for k in ("corp", "dart", "fin", "fin_rc", "fin_b", "free", "tot", "free_src"):   # 예전 이름 맞춤으로 엉뚱한 회사에 연결됐을 수 있어 처음부터 다시 읽는다
+                        if k in ("free", "tot") and e.get("free_src") != "DART":
+                            continue
+                        e.pop(k, None)
                 if c:
                     e["corp"] = c
+                    e["corp_v"] = 2
             if e.get("corp"):
                 reps = dart_reports(e["corp"], sub0)
                 if reps:
