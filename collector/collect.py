@@ -1022,21 +1022,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for no in ("2357", "2334"):
-        try:
-            t = text_of(get(DETAIL.format(no)))
-            out[no] = {"parsed": parse_detail(t, no), "snip": [t[max(0, m.start() - 120):m.start() + 200] for m in list(re.finditer("상장일|상장예정", t))[:5]]}
-        except Exception as ex:
-            out[no] = str(ex)
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
