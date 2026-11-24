@@ -618,19 +618,27 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const availH = window.innerHeight * k - px(cs.paddingTop) - px(cs.paddingBottom);
 
     if (!mob) {
-      cstage.style.height = ''; cscale.style.width = ''; cscale.style.transform = ''; root.classList.remove('compact'); $('tail').style.height = '0px';
-      const ch = wrap.offsetHeight || 1;
-      const fitSc = Math.max(0.1, Math.min(1, availW / DW, (availH - 1) / ch));
-      /* resize / first load sets the size; switching month or toggling types only ever shrinks it to avoid scrolling */
-      if (rebase === true || mobBase) baseSc = fitSc;
-      mobBase = false;
-      const sc = Math.min(baseSc, fitSc);
-      wrap.style.transform = 'scale(' + sc + ')';
-      stage.style.width = Math.floor(DW * sc) + 'px';
-      stage.style.height = Math.ceil(ch * sc) + 'px';
+      /* PC: title, buttons and footer keep their real size at a fixed width; only the calendar scales so the month fits the window height */
+      root.classList.remove('compact'); $('tail').style.height = '0px';
+      wrap.style.transform = ''; stage.style.height = '';
+      const W = Math.max(DW_MIN, Math.min(DW, root.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight)));
+      stage.style.width = W + 'px'; wrap.style.width = W + 'px';
+      cstage.style.height = '0px'; cscale.style.transform = ''; cscale.style.width = W + 'px';
+      const chrome = wrap.offsetHeight;
+      const room = window.innerHeight - px(cs.paddingTop) - px(cs.paddingBottom) - chrome - 1;
+      let sc = Math.max(0.4, Math.min(1, room / (cscale.offsetHeight || 1)));
+      for (let i = 0; i < 2; i++) {
+        cscale.style.width = (W / sc) + 'px';
+        const h = cscale.offsetHeight || 1;
+        if (h * sc > room && sc > 0.4) sc = Math.max(0.4, room / h);
+      }
+      cscale.style.width = (W / sc) + 'px';
+      cscale.style.transform = 'scale(' + sc + ')';
+      cstage.style.height = Math.ceil(cscale.offsetHeight * sc) + 'px';
       return;
     }
 
+    wrap.style.width = '';
     wrap.style.transform = ''; stage.style.width = ''; stage.style.height = '';
     const y0 = window.scrollY;
     $('tail').style.height = '0px';
