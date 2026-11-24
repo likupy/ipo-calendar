@@ -1025,14 +1025,35 @@ def main():
 def probe():
     import urllib.request
     out = {}
-    for k, u in [("page", "https://stock.naver.com/ipo/A0231Y0"), ("m", "https://m.stock.naver.com/ipo/A0231Y0"), ("api1", "https://m.stock.naver.com/api/ipo/A0231Y0"), ("api2", "https://api.stock.naver.com/ipo/A0231Y0"), ("api3", "https://m.stock.naver.com/front-api/ipo/A0231Y0")]:
-        try:
-            r = urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"}), timeout=25)
-            t = r.read().decode("utf-8", "replace")
-            i = t.find("12.03")
-            out[k] = {"len": len(t), "ct": r.headers.get("content-type"), "head": t[:300], "hit": [t[max(0, m.start() - 150):m.start() + 100] for m in re.finditer(r"상장|listing|12[.\-/]0?3", t)][:6], "apis": sorted(set(re.findall(r"https?://[\w./-]*(?:api|front)[\w./?=&-]*", t)))[:15]}
-        except Exception as ex:
-            out[k] = str(ex)[:150]
+    def get(u):
+        return urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"}), timeout=25).read().decode("utf-8", "replace")
+    def txt(h):
+        return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", h)).strip()
+    try:
+        t = get("https://stock.naver.com/ipo/A0231Y0")
+        i = t.find("IpoDetailSchedule")
+        out["sched"] = txt(t[i - 200:i + 4000])[:700]
+        out["body"] = txt(t[t.find("<body"):])[:1500]
+        out["nd"] = [m for m in re.findall(r'"(?:listingDate|listDate|listing\w*)"\s*:\s*"?[^,}]{0,30}', t)][:10]
+    except Exception as ex:
+        out["sched"] = str(ex)[:150]
+    try:
+        t = get("https://stock.naver.com/ipo")
+        codes = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})", t)))
+        out["codes"] = codes[:60]
+        out["list"] = txt(t[t.find("<body"):])[:1500]
+        res = {}
+        for c in codes[:14]:
+            try:
+                h = get("https://stock.naver.com/ipo/" + c)
+                sc = re.findall(r"IpoDetailSchedule_text[^>]*>([^<]*)</span><span[^>]*>([^<]*)<", h)
+                nm = re.findall(r"<title>([^<]*)</title>", h)
+                res[c] = [nm[:1], sc]
+            except Exception as ex:
+                res[c] = str(ex)[:60]
+        out["res"] = res
+    except Exception as ex:
+        out["codes"] = str(ex)[:150]
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
