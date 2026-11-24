@@ -764,12 +764,18 @@ def enrich(merged, old, alias):
                         log("  유통가능 주식수를 못 읽음", it["name"], reps["설명서"])
                 if reps.get("설명서") and not e.get("inst") and e.get("comp") and not e.get("inst_tried"):
                     # 38 이 기관 배정을 범위로만 적는 종목: 투자설명서의 '경쟁률은 우리사주 우선배정 물량을 제외한 N주를 기준으로 산출' 문장에서 읽는다
-                    e["inst_tried"] = 1
-                    dm = re.findall(r"경쟁률은\s*우리사주[^.]{0,40}?제외한\s*([\d,]+)\s*주를\s*기준으로\s*산출", fetch_doc_text(reps["설명서"]))
-                    if dm and e.get("tot") and 0 < num(dm[-1]) < e["tot"]:
-                        e["inst"] = num(dm[-1])
-                    else:
-                        log("  기관 배정 수량을 못 읽음", it["name"])
+                    try:
+                        dtxt = fetch_doc_text(reps["설명서"])
+                    except Exception as ex2:
+                        dtxt = None
+                        log("  투자설명서 다시 읽기 실패(다음에 재시도)", it["name"], ex2)
+                    if dtxt is not None:
+                        e["inst_tried"] = 1
+                        dm = re.findall(r"경쟁률은\s*우리사주[^.]{0,40}?제외한\s*([\d,]+)\s*주를\s*기준으로\s*산출", dtxt)
+                        if dm and e.get("tot") and 0 < num(dm[-1]) < e["tot"]:
+                            e["inst"] = num(dm[-1])
+                        else:
+                            log("  기관 배정 수량을 못 읽음", it["name"])
                 if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER):
                     rtxt = fetch_doc_text(reps["실적"])
                     f = parse_report(rtxt)
