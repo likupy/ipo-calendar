@@ -45,11 +45,11 @@ def log(*a):
     print(*a, file=sys.stderr)
 
 
-def get(url, timeout=25):
+def get(url, timeout=25, ua="Mozilla/5.0"):
     last = None
     for i in range(3):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": ua})
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 raw = r.read()
             try:
@@ -805,16 +805,19 @@ def enrich(merged, old, alias):
         it["ext"] = e
 
 
+NV_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
+
+
 def naver_listings(need):
     """38에 상장일이 없는 종목만, 네이버 증권 공모주 페이지의 상장일을 보조로 읽는다. {norm(이름): 'YYYY-MM-DD'}"""
     out = {}
     try:
-        h = get("https://stock.naver.com/ipo")
+        h = get("https://stock.naver.com/ipo", ua=NV_UA)
         codes = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h))
         log(f"네이버 공모주 코드 {len(codes)}개")
         for c in sorted(codes):
             try:
-                t = get("https://stock.naver.com/ipo/" + c)
+                t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
                 nm = re.search(r"<title>\s*([^<]*?)\s*-\s*Npay", t)
                 m = re.search(r"IpoDetailSchedule_text[^>]*>\s*상장\s*</span><span[^>]*>\s*(20\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", t)
                 if nm and m and norm(nm.group(1)) in need:
