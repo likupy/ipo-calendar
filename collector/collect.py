@@ -1065,5 +1065,24 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = fetch_doc_text("20261123000249")
+        hs = [(m.start(), m.group(1)) for m in re.finditer(r"\[([^\[\]]{2,14})\]", t) if "증권" in m.group(1)]
+        out["hs"] = [h[1] for h in hs]
+        out["seg"] = [t[p:p + 1800] for p, n in hs[:3]]
+        i = t.find("균등방식")
+        out["eq"] = t[max(0, i - 900):i + 500]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
