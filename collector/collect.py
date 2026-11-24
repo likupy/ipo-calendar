@@ -1088,5 +1088,22 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    sel = json.load(open("collector/sel.json"))
+    for n, r in sel.items():
+        try:
+            t = fetch_doc_text(r)
+            out[n] = [t[max(0, m.start() - 120):m.start() + 160].replace("\n", " ") for m in re.finditer(r"균등", t)][:4]
+        except Exception as ex:
+            out[n] = str(ex)[:100]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
