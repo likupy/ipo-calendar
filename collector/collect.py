@@ -805,6 +805,28 @@ def enrich(merged, old, alias):
         it["ext"] = e
 
 
+def naver_listings(need):
+    """38에 상장일이 없는 종목만, 네이버 증권 공모주 페이지의 상장일을 보조로 읽는다. {norm(이름): 'YYYY-MM-DD'}"""
+    out = {}
+    try:
+        h = get("https://stock.naver.com/ipo")
+        codes = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h))
+        log(f"네이버 공모주 코드 {len(codes)}개")
+        for c in sorted(codes):
+            try:
+                t = get("https://stock.naver.com/ipo/" + c)
+                nm = re.search(r"<title>\s*([^<]*?)\s*-\s*Npay", t)
+                m = re.search(r"IpoDetailSchedule_text[^>]*>\s*상장\s*</span><span[^>]*>\s*(20\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", t)
+                if nm and m and norm(nm.group(1)) in need:
+                    out[norm(nm.group(1))] = f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+            except Exception as e:
+                log("  네이버 상세 실패", c, e)
+    except Exception as e:
+        log("네이버 목록 실패(무시):", e)
+    log("네이버 상장일 보조:", out)
+    return out
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
@@ -831,6 +853,8 @@ def main():
 
     merged = dict(old)
     today_s = datetime.now(KST).date().isoformat()
+    need = {norm(d["name"]) for d in scraped if not d["listing"]}
+    nv = naver_listings(need) if need else {}
     for d in scraped:
         item = {"id": "n" + d["no"], "name": d["name"], "brokers": list(d["brokers"]), "sub": [iso(d["sub"][0]), iso(d["sub"][1])]}
         flags = []
@@ -838,6 +862,8 @@ def main():
             item["refund"] = iso(d["refund"])
         if d["listing"]:
             item["listing"] = iso(d["listing"])
+        elif nv.get(norm(d["name"])) and nv[norm(d["name"])] >= item["sub"][1]:
+            item["listing"] = nv[norm(d["name"])]   # 38 에 아직 없을 때만 네이버 값. 38 값이 올라오면 그 값이 우선한다.
         if d["price"] is not None:
             item["price"] = d["price"]
         if d["band"]:
