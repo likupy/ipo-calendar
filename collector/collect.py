@@ -1092,10 +1092,8 @@ def probe():
     out = {}
     try:
         t = fetch_doc_text("20261020000380")
-        i = t.find("청약 및 배정현황")
-        out["tbl"] = t[max(0, i - 100):i + 1500]
-        j = t.find("세부 배정")
-        out["det"] = t[max(0, j - 100):j + 1800]
+        i = t.find("합계", t.find("일괄청약방식"))
+        out["tail"] = t[max(0, i - 900):i + 900]
     except Exception as ex:
         out["err"] = str(ex)[:200]
     doc = json.load(open(OUT, encoding="utf-8"))
