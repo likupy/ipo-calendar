@@ -1151,5 +1151,26 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {"rows": [], "bad": []}
+    for pg in range(1, 7):
+        try:
+            h = get("http://www.38.co.kr/html/fund/index.htm?o=nw" + ("" if pg == 1 else f"&page={pg}"))
+        except Exception as ex:
+            out["err"] = str(ex)[:100]; break
+        for r in re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S):
+            t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r).replace("&nbsp;", " ")).strip()
+            if "바로팜" in t:
+                out["rows"].append(t)
+            if re.search(r"20\d\d/\d\d/\d\d", t) and not re.match(r"^(.+?)\s+(20\d\d)/(\d\d)/(\d\d)\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%(?:\s+([\d,]+))?\s*$", t):
+                out["bad"].append(t[:200])
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
