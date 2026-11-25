@@ -1151,5 +1151,23 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = fetch_doc_text("20261124000540")
+        out["len"] = len(t)
+        out["fee"] = [t[max(0, m.start() - 150):m.start() + 250].replace("\n", " ") for m in re.finditer(r"청약수수료|청약\s*수수료", t)][:4]
+        out["acct"] = [t[max(0, m.start() - 150):m.start() + 250].replace("\n", " ") for m in re.finditer(r"계좌\s*개설|비대면|청약자격", t)][:4]
+        out["hs"] = [t[max(0, m.start() - 60):m.start() + 200].replace("\n", " ") for m in re.finditer(r"청약취급처|청약사무취급처|청약방법", t)][:4]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
