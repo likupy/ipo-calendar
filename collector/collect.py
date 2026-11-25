@@ -1172,33 +1172,19 @@ def main():
 
 def probe():
     out = {}
-    for nm, rc, no in [("big", "20260918000412", "2294"), ("dts", "20261016000472", "2326"), ("rbl", "20261027000261", "2335")]:
+    for nm, rc in [("big", "20260918000412"), ("dts", "20261016000472"), ("rbl", "20261027000261")]:
         try:
             t = fetch_doc_text(rc)
-            o = {}
-            o["경쟁률"] = [t[max(0, m.start() - 150):m.start() + 250] for m in re.finditer(r"경쟁률", t)][:6]
-            o["비례"] = [t[max(0, m.start() - 200):m.start() + 300] for m in re.finditer(r"비례", t)][:6]
-            hs = [m.start() for m in re.finditer(r"\[[^\[\]]{2,14}증권[^\[\]]{0,6}\]", t)]
-            o["broker"] = [t[h:h + 900] for h in hs[:4]]
-            o["len"] = len(t)
-            out[nm] = o
+            o = []
+            for m in re.finditer(r"합계\s", t):
+                o.append(t[max(0, m.start() - 60):m.start() + 1100])
+            o2 = [t[m.start() - 100:m.start() + 700] for m in re.finditer(r"미래에셋증권\(주\)는 비례|비례청약 경쟁률|비례배정방식 배정물량|비례배정 경쟁률", t)]
+            out[nm] = [o[-3:], o2[:3]]
         except Exception as ex:
             out[nm] = str(ex)[:200]
-        try:
-            tt = text_of(get(DETAIL.format(no), timeout=30))
-            i = tt.find("인수회사"); j = tt.find("그 룹 별")
-            out[nm + "38"] = [tt[i:i + 500] if i >= 0 else "", tt[j:j + 600] if j >= 0 else "", tt[tt.find("주간사"):tt.find("주간사") + 300]]
-        except Exception as ex:
-            out[nm + "38"] = str(ex)[:100]
-    try:
-        tt = text_of(get(DETAIL.format("2363"), timeout=30))
-        out["pgt38"] = [tt[tt.find("주간사"):tt.find("주간사") + 300], tt[tt.find("인수회사"):tt.find("인수회사") + 500]]
-    except Exception as ex:
-        out["pgt38"] = str(ex)[:100]
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
 
 
 if __name__ == "__main__":
