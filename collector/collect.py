@@ -536,14 +536,14 @@ def parse_ext38(t, brokers):
                     al[b] = al.get(b, 0) + lo
                 else:
                     alr[b] = [alr.get(b, [0, 0])[0] + lo, alr.get(b, [0, 0])[1] + hi]
-    if gen and gen == gen_hi:   # 확정된 숫자
+    if alr and not al:   # 38 이 아직 범위로 적은 종목: 범위 그대로 보여 준다(인수회사 표에 적힌 값)
+        pass
+    elif gen and gen == gen_hi:   # 확정된 숫자
         if not (al and not alr and sum(al.values()) == gen):
             al = {brokers[0]: gen} if len(brokers) == 1 else {}
         alr = {}
-    elif gen and gen_hi and gen < gen_hi:   # 38 이 아직 범위로 적은 종목(수요예측 전·청약 전): 범위 그대로 보여 준다
-        al = {}
-        if not (alr and not al and sum(v[0] for v in alr.values()) == gen and sum(v[1] for v in alr.values()) == gen_hi):
-            alr = {brokers[0]: [gen, gen_hi]} if len(brokers) == 1 else {}
+    elif gen and gen_hi and gen < gen_hi and len(brokers) == 1:
+        al, alr = {}, {brokers[0]: [gen, gen_hi]}
     else:
         al, alr = {}, {}
     if al:
