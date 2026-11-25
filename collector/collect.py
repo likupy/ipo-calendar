@@ -1112,5 +1112,25 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        h = get("http://www.38.co.kr/html/fund/index.htm?o=nw")
+        out["len"] = len(h)
+        i = h.find("신규상장")
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S)
+        out["rows"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).strip()[:300] for r in rows if "공모가" in r or "시초" in r or "종가" in r][:4]
+        out["txt"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).strip()[:300] for r in rows if "엠비디" in r or "하나에어로" in r][:3]
+        out["hdr"] = [m.group(0)[:200] for m in re.finditer(r"시초[^<]{0,40}|첫날[^<]{0,40}", h)][:8]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
