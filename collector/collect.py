@@ -568,6 +568,13 @@ def parse_report(t):
     if m:
         f["eq"], f["pr"] = num(m.group(1)), num(m.group(2))
         f["eq_p"] = plan_eq(t, f["eq"])
+    # 스팩 보고서는 '청약 현황' 표의 일반투자자 청약수량이 배정수량으로 잘려 있다. 실제 청약수량은 '세부 배정 현황' 표 합계 줄에 있다.
+    if f.get("n") and f.get("req") is not None:
+        for m in re.finditer(r"합계\s+([\d,]+)\s+([\d,]+)\s+", t):
+            if num(m.group(1)) == f["n"] and num(m.group(2)) > f["req"]:
+                f["req"] = num(m.group(2))
+                break
+    f["rv"] = 2
     return f if "unlock" in f else {}
 
 
@@ -753,7 +760,7 @@ def enrich(merged, old, alias):
             continue
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
-        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or "eq_p" in oe["fin"]) and (not is_spac(it["name"]) or oe.get("corp_v") == 2):
+        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or oe["fin"].get("rv") == 2) and (not is_spac(it["name"]) or oe.get("corp_v") == 2):
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -799,7 +806,7 @@ def enrich(merged, old, alias):
                             e["inst"] = num(dm[-1])
                         else:
                             log("  기관 배정 수량을 못 읽음", it["name"])
-                if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER or "eq_p" not in (e.get("fin") or {})):
+                if reps.get("실적") and (e.get("fin_rc") != reps["실적"] or e.get("v") != EXT_VER or (e.get("fin") or {}).get("rv") != 2):
                     rtxt = fetch_doc_text(reps["실적"])
                     f = parse_report(rtxt)
                     e.pop("fin_b", None)
@@ -1088,21 +1095,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    try:
-        t = fetch_doc_text("20261020000380")
-        i = t.find("합계", t.find("일괄청약방식"))
-        out["tail"] = t[max(0, i - 900):i + 900]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
