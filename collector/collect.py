@@ -522,19 +522,34 @@ def parse_ext38(t, brokers):
     m = re.search(r"기관투자자등\s*([\d,]+)\s*주\s*\(", t)
     if m:
         e["inst"] = num(m.group(1))
-    m = re.search(r"주간사\s+.+?\s+주식수\s*:\s*([\d,]+)\s*주\s*/\s*청약한도", t)
+    m = re.search(r"주간사\s+.+?\s+주식수\s*:\s*([\d,]+)(?:\s*~\s*([\d,]+))?\s*주\s*/\s*청약한도", t)
     gen = num(m.group(1)) if m else None
-    al = {}
+    gen_hi = num(m.group(2)) if m and m.group(2) else gen
+    al, alr = {}, {}
     seg = re.search(r"인수회사\s*주식수\s*청약한도\s*기타\s*(.+?)\s*주요일정", t)
     if seg:
-        for nm, q in re.findall(r"([가-힣A-Za-z]*(?:증권|은행|금융투자)(?:㈜)?)\s+([\d,]+)\s*주", seg.group(1)):
+        for nm, q, q2 in re.findall(r"([가-힣A-Za-z]*(?:증권|은행|금융투자)(?:㈜)?)\s+([\d,]+)(?:\s*~\s*([\d,]+))?\s*주", seg.group(1)):
             b = short_broker(nm)
             if b:
-                al[b] = al.get(b, 0) + num(q)
-    if not (gen and al and sum(al.values()) == gen):
-        al = {brokers[0]: gen} if gen and len(brokers) == 1 else {}
+                lo, hi = num(q), (num(q2) if q2 else num(q))
+                if lo == hi:
+                    al[b] = al.get(b, 0) + lo
+                else:
+                    alr[b] = [alr.get(b, [0, 0])[0] + lo, alr.get(b, [0, 0])[1] + hi]
+    if gen and gen == gen_hi:   # 확정된 숫자
+        if not (al and not alr and sum(al.values()) == gen):
+            al = {brokers[0]: gen} if len(brokers) == 1 else {}
+        alr = {}
+    elif gen and gen_hi and gen < gen_hi:   # 38 이 아직 범위로 적은 종목(수요예측 전·청약 전): 범위 그대로 보여 준다
+        al = {}
+        if not (alr and not al and sum(v[0] for v in alr.values()) == gen and sum(v[1] for v in alr.values()) == gen_hi):
+            alr = {brokers[0]: [gen, gen_hi]} if len(brokers) == 1 else {}
+    else:
+        al, alr = {}, {}
     if al:
         e["alloc"] = al
+    if alr:
+        e["alloc_r"] = alr
     m = re.search(r"합\s*계\s*([\d,]+)\s*100\.00\s*%\s*([\d,]+)\s*100\.00\s*%\s*([\d,]+)\s*([\d.]+)\s*%\s*([\d,]+)\s*([\d.]+)\s*%", t)
     if m:
         e["tot"], e["free"] = num(m.group(2)), num(m.group(5))
@@ -768,6 +783,10 @@ def enrich(merged, old, alias):
         try:
             x = parse_ext38(text_of(get(DETAIL.format(iid[1:]))), it["brokers"])
             e.update(x)
+            if x.get("alloc"):
+                e.pop("alloc_r", None)
+            elif x.get("alloc_r"):
+                e.pop("alloc", None)
         except Exception as ex:
             log("  38 확장 실패", it["name"], ex)
         try:
@@ -1151,24 +1170,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    for no in ['2364', '2357', '2359', '2350', '2353', '2360']:
-        try:
-            t = text_of(get(DETAIL.format(no), timeout=30))
-            i = t.find("총공모주식수")
-            j = t.find("공모사항")
-            k = t.find("인수회사")
-            out[no] = [t[max(0, i - 50):i + 400], t[j:j + 700], t[k:k + 500] if k >= 0 else ""]
-        except Exception as ex:
-            out[no] = str(ex)[:100]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
