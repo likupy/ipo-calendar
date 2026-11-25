@@ -852,7 +852,32 @@ def enrich(merged, old, alias):
 NV_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
 
 
-PX_NAMES = {"하나에어로다이내믹스", "엠비디"}   # 상장 후 주가 시험 표시 대상(이름은 norm 기준)
+def scrape_nw():
+    """38 '신규상장' 목록: 상장일·공모가·시초가·첫날종가. {norm(이름): {'ld','price','o','d1'}} (첫날종가가 아직 없으면 d1 은 없다)"""
+    out = {}
+    for pg in range(1, 7):
+        try:
+            h = get("http://www.38.co.kr/html/fund/index.htm?o=nw" + ("" if pg == 1 else f"&page={pg}"))
+        except Exception as e:
+            log("38 신규상장 목록 실패", pg, e)
+            break
+        n0 = len(out)
+        for r in re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S):
+            t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r).replace("&nbsp;", " ")).strip()
+            m = re.match(r"^(.+?)\s+(20\d\d)/(\d\d)/(\d\d)\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%(?:\s+([\d,]+))?\s*$", t)
+            if not m:
+                continue
+            price, o, pct = num(m.group(7)), num(m.group(9)), float(m.group(10))
+            if not price or not o or abs((o / price - 1) * 100 - pct) > 0.02:   # 시초/공모 비율과 맞지 않으면 읽지 않는다
+                continue
+            e = {"ld": f"{m.group(2)}-{m.group(3)}-{m.group(4)}", "price": price, "o": o}
+            if m.group(11):
+                e["d1"] = num(m.group(11))
+            out.setdefault(norm(m.group(1)), e)
+        if len(out) == n0:
+            break
+    log(f"38 신규상장 {len(out)}종목")
+    return out
 
 
 def naver_listings(need, pxn=()):
@@ -911,7 +936,9 @@ def main():
     merged = dict(old)
     today_s = datetime.now(KST).date().isoformat()
     need = {norm(d["name"]) for d in scraped if not d["listing"]}
-    nv, pxs = naver_listings(need, {norm(x) for x in PX_NAMES})
+    today_names = {norm(d["name"]) for d in scraped if d["listing"] and iso(d["listing"]) == today_s}
+    nv, pxs = naver_listings(need, today_names)
+    nwpx = scrape_nw()
     for d in scraped:
         item = {"id": "n" + d["no"], "name": d["name"], "brokers": list(d["brokers"]), "sub": [iso(d["sub"][0]), iso(d["sub"][1])]}
         flags = []
@@ -983,19 +1010,31 @@ def main():
         if "listing" not in item:
             flags.append("상장일 미정")
         po0 = old.get(item["id"], {})
-        if pxs.get(norm(d["name"])):
-            item["px"] = pxs[norm(d["name"])]
-        elif po0.get("px") and norm(d["name"]) in {norm(x) for x in PX_NAMES}:
-            item["px"] = po0["px"]   # 이번 갱신에서 못 읽었으면 직전 값을 유지
         for k in ("minq", "minq_rc", "minq_v", "acct", "fee", "elig_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
             if k not in item and k in po0:
                 item[k] = po0[k]
         item["flags"] = flags
         merged[item["id"]] = item
 
-    for it_ in merged.values():   # 38 목록에서 빠진 지난 종목도 주가는 갱신한다
-        if it_.get("name") and pxs.get(norm(it_["name"])):
-            it_["px"] = pxs[norm(it_["name"])]
+    now_k = datetime.now(KST)
+    for it_ in merged.values():   # 상장 첫날 시초가·종가(38 신규상장 목록) + 상장 당일 장중 현재가(네이버)
+        if not it_.get("name") or not it_.get("listing"):
+            continue
+        n_ = norm(it_["name"])
+        r_ = nwpx.get(n_)
+        px = None
+        if r_ and r_["ld"] == it_["listing"] and (it_.get("price") is None or r_["price"] == it_["price"]):
+            px = {"o": r_["o"]}
+            if r_.get("d1") and (it_["listing"] < today_s or (it_["listing"] == today_s and now_k.hour * 60 + now_k.minute >= 15 * 60 + 40)):
+                px["d1"] = r_["d1"]
+            elif it_["listing"] == today_s and pxs.get(n_):
+                px["c"], px["st"], px["at"] = pxs[n_]["c"], pxs[n_]["st"], pxs[n_]["at"]
+        if px:
+            it_["px"] = px
+        elif it_.get("px") and not r_:
+            pass   # 이번 갱신에서 목록에 없으면 직전 값 유지
+        else:
+            it_.pop("px", None)
     try:
         backfill(merged, today_s)
     except Exception as e:
@@ -1112,25 +1151,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    try:
-        h = get("http://www.38.co.kr/html/fund/index.htm?o=nw")
-        out["len"] = len(h)
-        i = h.find("신규상장")
-        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S)
-        out["rows"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).strip()[:300] for r in rows if "공모가" in r or "시초" in r or "종가" in r][:4]
-        out["txt"] = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r)).strip()[:300] for r in rows if "엠비디" in r or "하나에어로" in r][:3]
-        out["hdr"] = [m.group(0)[:200] for m in re.finditer(r"시초[^<]{0,40}|첫날[^<]{0,40}", h)][:8]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
