@@ -1088,5 +1088,23 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = fetch_doc_text("20261020000380")
+        i = t.find("청약 및 배정현황")
+        out["tbl"] = t[max(0, i - 100):i + 1500]
+        j = t.find("세부 배정")
+        out["det"] = t[max(0, j - 100):j + 1800]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
