@@ -1188,31 +1188,22 @@ def main():
 
 def probe():
     out = {}
-    def ctx(t, pats):
-        r = []
-        for pt in pats:
-            for m in re.finditer(pt, t):
-                r.append(t[max(0, m.start() - 250):m.start() + 250])
-        return r[:6]
     try:
-        tt = text_of(get(DETAIL.format("2294"), timeout=30))
-        out["38"] = ctx(tt, [r"2,?840", r"2,?655", r"비례"])
-        out["38b"] = [tt[i:i + 700] for i in [m.start() for m in re.finditer(r"청약경쟁률|일반청약자 경쟁률|증권사별", tt)][:3]]
+        h = get("https://stock.naver.com/ipo", ua=NV_UA)
+        codes = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h)))
+        names = {}
+        for c in codes:
+            t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
+            nm = re.search(r"<title>\s*([^<]*?)\s*-\s*Npay", t)
+            names[c] = nm.group(1) if nm else "?"
+            if nm and any(k in nm.group(1) for k in ("빅웨이브", "디티에스", "래블업")):
+                sn = []
+                for m in re.finditer(r"경쟁률|비례", t):
+                    sn.append(re.sub(r"\s+", " ", t[max(0, m.start() - 200):m.start() + 300]))
+                out[nm.group(1)] = [len(t), sn[:8]]
+        out["names"] = names
     except Exception as ex:
-        out["38"] = str(ex)[:100]
-    for nm, rc in [("실적", "20260918000412")]:
-        try:
-            t = fetch_doc_text(rc)
-            out[nm] = ctx(t, [r"2,?840\.", r"2,?655\.", r"2,?840", r"2,?655"])
-        except Exception as ex:
-            out[nm] = str(ex)[:100]
-    for k in ("설명서", "신고서"):
-        try:
-            rc = {"설명서": "20260914000385", "신고서": "20260914000379"}[k]
-            t = fetch_doc_text(rc)
-            out[k] = ctx(t, [r"2,?840\.", r"2,?655\."])
-        except Exception as ex:
-            out[k] = str(ex)[:100]
+        out["err"] = str(ex)[:200]
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
