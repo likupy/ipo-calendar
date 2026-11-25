@@ -864,15 +864,15 @@ def scrape_nw():
         n0 = len(out)
         for r in re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S):
             t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r).replace("&nbsp;", " ")).strip()
-            m = re.match(r"^(.+?)\s+(20\d\d)/(\d\d)/(\d\d)\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%(?:\s+([\d,]+))?\s*$", t)
+            m = re.match(r"^(.+?)\s+(20\d\d)/(\d\d)/(\d\d)\s+(?:[\d,]+|-)\s+(?:-?[\d.]+)?\s*%\s+([\d,]+)\s+(?:-?[\d.]+)?\s*%\s+([\d,]+)\s+(-?[\d.]+)%(?:\s+([\d,]+))?\s*$", t)
             if not m:
                 continue
-            price, o, pct = num(m.group(7)), num(m.group(9)), float(m.group(10))
+            price, o, pct = num(m.group(5)), num(m.group(6)), float(m.group(7))
             if not price or not o or abs((o / price - 1) * 100 - pct) > 0.02:   # 시초/공모 비율과 맞지 않으면 읽지 않는다
                 continue
             e = {"ld": f"{m.group(2)}-{m.group(3)}-{m.group(4)}", "price": price, "o": o}
-            if m.group(11):
-                e["d1"] = num(m.group(11))
+            if m.group(8):
+                e["d1"] = num(m.group(8))
             out.setdefault(norm(m.group(1)), e)
         if len(out) == n0:
             break
@@ -1151,26 +1151,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {"rows": [], "bad": []}
-    for pg in range(1, 7):
-        try:
-            h = get("http://www.38.co.kr/html/fund/index.htm?o=nw" + ("" if pg == 1 else f"&page={pg}"))
-        except Exception as ex:
-            out["err"] = str(ex)[:100]; break
-        for r in re.findall(r"<tr[^>]*>(.*?)</tr>", h, re.S):
-            t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", r).replace("&nbsp;", " ")).strip()
-            if "바로팜" in t:
-                out["rows"].append(t)
-            if re.search(r"20\d\d/\d\d/\d\d", t) and not re.match(r"^(.+?)\s+(20\d\d)/(\d\d)/(\d\d)\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%\s+([\d,]+)\s+(-?[\d.]+)%(?:\s+([\d,]+))?\s*$", t):
-                out["bad"].append(t[:200])
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
