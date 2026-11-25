@@ -993,6 +993,9 @@ def main():
         item["flags"] = flags
         merged[item["id"]] = item
 
+    for it_ in merged.values():   # 38 목록에서 빠진 지난 종목도 주가는 갱신한다
+        if it_.get("name") and pxs.get(norm(it_["name"])):
+            it_["px"] = pxs[norm(it_["name"])]
     try:
         backfill(merged, today_s)
     except Exception as e:
