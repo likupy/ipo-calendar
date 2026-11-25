@@ -1,6 +1,6 @@
 {
  "v": 3,
- "updatedAt": "2026-11-25T09:55",
+ "updatedAt": "2026-11-25T11:06",
  "source": "38커뮤니케이션+OpenDART",
  "ipos": [
   {
@@ -2411,6 +2411,12 @@
    ],
    "margin": 50,
    "mchk": 1,
+   "px": {
+    "o": 5930,
+    "c": 4365,
+    "st": "OPEN",
+    "at": "2026-11-25T11:04"
+   },
    "minq": {
     "하나": 20
    },
@@ -3344,18 +3350,5 @@
    "tab": "new",
    "text": "상장일 확정 · 12/3"
   }
- ],
- "probe": {
-  "txt": "try{Promise.all(C.fonts.map(function(f){return new w.FontFace(C.family,src(f),{weight:f.weight,style:'normal',display:'swap'}).load()})) .then(function(fs){try{s.setItem(C.key,'1')}catch(e){return}fs.forEach(function(x){d.fonts.add(x)})})['catch'](function(){})}catch(e){}},0)},{once:true})})(); !function(t,n){n=n||\"ntm\";window[\"ntm_\"+t]=n,window[n]=window[n]||[],window[n].push({\"ntm.start\":+new Date});t=document.getElementsByTagName(\"script\")[0],n=document.createElement(\"script\");n.async=!0,n.src=\"https://ntm.pstatic.net/scripts/ntm_d48fb2ca05ae.js\",t.parentNode.insertBefore(n,t)}(\"d48fb2ca05ae\",\"ntm\"); @font-face {font-family: IBM;src: url(https://ssl.pstatic.net/imgstock/fn/real/_front/font/IBMPlexSansCondensed-Medium.woff2) format('woff2'),url(https://ssl.pstatic.net/imgstock/fn/real/_front/font/IBMPlexSansCondensed-Medium.ttf) format('truetype');font-weight: 500;font-style: normal;} 네이버 네이버페이 증권 메뉴모음 종목 검색 검색 전체메뉴 마켓 MY 국내 해외 공모주 현재 위치 토론 지표 가상자산 투자정보 상장완료 하나에어로다이내믹스 항공기,우주선 및 부품 제조업 알림 설정 관심종목 추가 공모가 5,700원 시초가 10,130 원 공모가 대비 +77.72 % 현재가 4,290 원 공모가 대비 -100.00 % 상장일 2026. 11. 20. 증권사 IBK투자증권 하나에어로다이내믹스 종목 보러가기 공모정보 현재 위치 토론 일정 예비심사청구 2026. 05. 29. 심사승인 2026. 08. 28. 신고서제출 2026. 09. 21. 투자설명서 증권신고서 수요예측 2026. 11. 02. ~ 11. 06. IR Book 청약신청 2026. 11. 10. ~ 11. 11. 청약결과 통합 경쟁률 1,851.14 : 1 IBK투자증권 최종 비례배정 경쟁률 3,702.28 : 1 최종 청약 신청건수 129,620 건 최종 종합 청약 경쟁률 1,851.14 : 1 배정공고 2026. 11. 13. 납입 2026. 11. 13. 환불 2026. 11. 13. 상장 2026. 11. 20. 하나에어로다이내믹스 종목 보러가기 기업정보 하나에어로다이내믹스 종목코드 A271160 시장구분 코스닥 업종 항공기,우주선 및 부품 제조업 주요제품 항공기 치공구(39.52%), 항공기 조립(37.41%) 및 항공기부품(22.45%) 등 희망공모가 4,700 ~ 5,700원 확정공모가 5,700원 공모금액 251억 원 공모주식수 440만주 기관경쟁률 1,051.38 : 1 일반청약주식수 110만 ~ 132만 주 청약증권사 IBK투자증권 KIND 예비심사청구 , 증권신고서 기준 더보기 실적정보 매출액 24년4Q 323 25년4Q 333 26년2Q 206 영업이익 24년4Q 29 25년4Q 50 2",
-  "json": [
-   "Success\":true,\"detailCode\":\"\",\"message\":\"\",\"result\":{\"feModelType\":\"domestic\",\"id\":\"271160\",\"name\":\"하나에어로\",\"stockEndType\":\"stock\",\"itemCode\":\"271160\",\"currentPrice\":4290,\"currencyType\":\"KRW\",\"fluctuationsType\":\"FALLING\",\"fluctuations\":\"-570\",\"fluctuationsRatio\":\"-11.73\",\"tradableStatus\":\"tradable\",\"stockExchangeType\":\"KOSDAQ\",\"marketType\":\"KOSDAQ\",\"marketStatus\":\"OPEN\",\"localTradedAt\":\"2026-11-25T",
-   "ionsType\":\"FALLING\",\"fluctuations\":\"-570\",\"fluctuationsRatio\":\"-11.73\",\"tradableStatus\":\"tradable\",\"stockExchangeType\":\"KOSDAQ\",\"marketType\":\"KOSDAQ\",\"marketStatus\":\"OPEN\",\"localTradedAt\":\"2026-11-25T10:57:19+09:00\",\"openPrice\":4665,\"highPrice\":4750,\"lowPrice\":4240}},\"dataUpdateCount\":1,\"dataUpdatedAt\":1795571884399,\"error\":null,\"errorUpdateCount\":0,\"errorUpdatedAt\":0,\"fetchFailureCount\":0,\"fetchF",
-   "luctuations\":\"-570\",\"fluctuationsRatio\":\"-11.73\",\"tradableStatus\":\"tradable\",\"stockExchangeType\":\"KOSDAQ\",\"marketType\":\"KOSDAQ\",\"marketStatus\":\"OPEN\",\"localTradedAt\":\"2026-11-25T10:57:19+09:00\",\"openPrice\":4665,\"highPrice\":4750,\"lowPrice\":4240}},\"dataUpdateCount\":1,\"dataUpdatedAt\":1795571884399,\"error\":null,\"errorUpdateCount\":0,\"errorUpdatedAt\":0,\"fetchFailureCount\":0,\"fetchFailureReason\":null,\"fe",
-   ".73\",\"tradableStatus\":\"tradable\",\"stockExchangeType\":\"KOSDAQ\",\"marketType\":\"KOSDAQ\",\"marketStatus\":\"OPEN\",\"localTradedAt\":\"2026-11-25T10:57:19+09:00\",\"openPrice\":4665,\"highPrice\":4750,\"lowPrice\":4240}},\"dataUpdateCount\":1,\"dataUpdatedAt\":1795571884399,\"error\":null,\"errorUpdateCount\":0,\"errorUpdatedAt\":0,\"fetchFailureCount\":0,\"fetchFailureReason\":null,\"fetchMeta\":null,\"isInvalidated\":false,\"status\""
-  ],
-  "p": [
-   "scription__hMFJo\">5,700원</dd></div><div class=\"IpoInfo_item__3IdYK\"><dt class=\"IpoInfo_term__psLBZ\">시초가</dt><dd class=\"IpoInfo_description__hMFJo\">10,130<!-- -->원<span class=\"IpoInfo_compare__FpXw_ IpoInfo_RISING__1_1Om\">공모가 대비 <!-- -->+77.72<!-- -->%</span></dd></div><div class=\"IpoInfo_item__3IdYK",
-   "->+77.72<!-- -->%</span></dd></div><div class=\"IpoInfo_item__3IdYK\"><dt class=\"IpoInfo_term__psLBZ\">현재가</dt><dd class=\"IpoInfo_description__hMFJo\">4,290<!-- -->원<span class=\"IpoInfo_compare__FpXw_ IpoInfo_FALLING__VcvCw\">공모가 대비 <!-- -->-100.00<!-- -->%</span></dd></div><div class=\"IpoInfo_item__3IdY"
-  ]
- }
+ ]
 }
