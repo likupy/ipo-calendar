@@ -294,7 +294,7 @@ def doc_text_any(m):
     raise RuntimeError("본문 없음")
 
 
-ELIG_VER = 2   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
+ELIG_VER = 3   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
 
 ELIG_HDR = re.compile(r"[【\[]\s*([^【】\[\]]{0,30}?)\s*(?:청약|참가)\s*자격\s*[】\]]")
 # 계좌개설 마감 (비대면 기준). 위에서부터 먼저 맞는 것을 쓴다.
@@ -343,7 +343,7 @@ def broker_sections(txt):
         if not b:
             continue
         end = hs[i + 1].start() if i + 1 < len(hs) else m.end() + 3000
-        out.setdefault(b, txt[m.end(): min(end, m.end() + 3000)])
+        out[b] = out.get(b, "") + " " + txt[m.end(): min(end, m.end() + 3000)]   # 같은 증권사 머리글이 연이어 나오면(안내문 + 표) 이어 붙인다
     return out
 
 
@@ -1151,24 +1151,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    try:
-        t = fetch_doc_text("20261124000540")
-        secs = broker_sections(t)
-        out["keys"] = list(secs)
-        out["parsed"] = [str(x) for x in parse_elig(t)]
-        out["sec"] = {k: v[:1400] for k, v in secs.items()}
-        out["hdr"] = [t[m.start():m.start() + 80] for m in re.finditer(r"일반청약자\s*(?:의\s*)?청약\s*자격", t)][:6]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
