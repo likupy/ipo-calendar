@@ -292,6 +292,23 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
 .xcd .ex { margin-top: 8px; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
 .xcd .bg.none { font-size: 18px; color: var(--ink-2); }
 .xcd .wt { margin-top: 8px; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.xpx .t { margin-top: 8px; font-size: 11.5px; color: var(--ink-2); }
+.xpx table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.xpx th { padding: 0 0 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: right; }
+.xpx th:first-child { text-align: left; }
+.xpx td { padding: 11px 0; border-top: 1px solid var(--line); text-align: right; font-size: 14.5px; font-weight: 700; }
+.xpx td:first-child { text-align: left; font-size: 13.5px; font-weight: 500; }
+.xpx tr:last-child td { border-bottom: 1px solid var(--line); }
+.xpx .pu { color: var(--up); } .xpx .pd { color: var(--down); }
+.xpx .big2 { display: grid; grid-template-columns: 1fr 1fr; }
+.xpx .big2 > div { padding: 2px 0; }
+.xpx .big2 > div + div { padding-left: 16px; border-left: 1px solid var(--line); }
+.xpx .big2 .l { font-size: 11.5px; color: var(--ink-2); font-weight: 600; }
+.xpx .big2 .v { margin-top: 5px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.xpx .big2 .v small { font-size: 13px; font-weight: 500; margin-left: 2px; }
+.xpx .big2 .r { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 99px; font-size: 12.5px; font-weight: 700; }
+.xpx .big2 .r.pu { background: color-mix(in srgb, var(--up) 11%, transparent); }
+.xpx .big2 .r.pd { background: color-mix(in srgb, var(--down) 11%, transparent); }
 .xfin .w { margin-top: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
 .xfin table { width: 100%; margin-top: 0; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .xfin th { padding: 0 0 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: right; }
@@ -729,7 +746,20 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       h += '<div class="w">청약(' + md(p.sub[0]) + '~' + md(p.sub[1]) + ')이 끝나고 배정 결과가 공시되면 표시돼요.</div>';
     }
     h += '</div></div>';
-    const finHtml = ended ? h : '';
+    let pxh = '';
+    if (p.px && p.price != null && p.listing && ts(p.listing) <= kstToday()) {
+      const q = p.px, pc = (a) => { const v = (a / p.price - 1) * 100; return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }, cs = a => a >= p.price ? 'pu' : 'pd';
+      const live = q.st === 'OPEN', lab = live ? '현재가' : '종가';
+      const at = q.at ? Number(q.at.slice(5, 7)) + '/' + Number(q.at.slice(8, 10)) + ' ' + q.at.slice(11, 16) + ' 기준' : '';
+      pxh = '<div class="sec xpx"><h4>상장 후 주가</h4>';
+      if (p.name === '엠비디') {   // 시험 표시: 큰 숫자 2단
+        pxh += '<div class="big2"><div><div class="l">시초가</div><div class="v">' + fmt(q.o) + '<small>원</small></div><div class="r ' + cs(q.o) + '">' + pc(q.o) + '</div></div><div><div class="l">' + lab + '</div><div class="v">' + fmt(q.c) + '<small>원</small></div><div class="r ' + cs(q.c) + '">' + pc(q.c) + '</div></div></div>';
+      } else {
+        pxh += '<table><tr><th></th><th>가격</th><th>공모가 대비</th></tr><tr><td>시초가</td><td>' + fmt(q.o) + '원</td><td class="' + cs(q.o) + '">' + pc(q.o) + '</td></tr><tr><td>' + lab + '</td><td>' + fmt(q.c) + '원</td><td class="' + cs(q.c) + '">' + pc(q.c) + '</td></tr></table>';
+      }
+      pxh += '<div class="t">' + at + '</div></div>';
+    }
+    const finHtml = pxh + (ended ? h : '');
     h = base;
     /* 영상 · 관련 링크 */
     const no = String(p.id).replace(/^n/, '');

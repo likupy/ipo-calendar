@@ -852,9 +852,12 @@ def enrich(merged, old, alias):
 NV_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
 
 
-def naver_listings(need):
+PX_NAMES = {"하나에어로다이내믹스", "엠비디"}   # 상장 후 주가 시험 표시 대상(이름은 norm 기준)
+
+
+def naver_listings(need, pxn=()):
     """38에 상장일이 없는 종목만, 네이버 증권 공모주 페이지의 상장일을 보조로 읽는다. {norm(이름): 'YYYY-MM-DD'}"""
-    out = {}
+    out, px = {}, {}
     try:
         h = get("https://stock.naver.com/ipo", ua=NV_UA)
         codes = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h))
@@ -866,12 +869,19 @@ def naver_listings(need):
                 m = re.search(r"IpoDetailSchedule_text[^>]*>\s*상장\s*</span><span[^>]*>\s*(20\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", t)
                 if nm and m and norm(nm.group(1)) in need:
                     out[norm(nm.group(1))] = f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+                if nm and norm(nm.group(1)) in pxn:
+                    o = re.search(r"시초가</dt><dd[^>]*>\s*([\d,]+)", t)
+                    cp = re.search(r'"itemCode":"%s","currentPrice":(\d+)' % c[1:], t) or re.search(r'"itemCode":"%s"[^{}]{0,200}?"currentPrice":(\d+)' % c[1:], t)
+                    st = re.search(r'"marketStatus":"(\w+)"', t)
+                    at = re.search(r'"localTradedAt":"(20\d\d-\d\d-\d\dT\d\d:\d\d)', t)
+                    if o and cp and st and at:
+                        px[norm(nm.group(1))] = {"o": num(o.group(1)), "c": int(cp.group(1)), "st": st.group(1), "at": at.group(1)}
             except Exception as e:
                 log("  네이버 상세 실패", c, e)
     except Exception as e:
         log("네이버 목록 실패(무시):", e)
-    log("네이버 상장일 보조:", out)
-    return out
+    log("네이버 상장일 보조:", out, "주가:", px)
+    return out, px
 
 
 def main():
@@ -901,7 +911,7 @@ def main():
     merged = dict(old)
     today_s = datetime.now(KST).date().isoformat()
     need = {norm(d["name"]) for d in scraped if not d["listing"]}
-    nv = naver_listings(need) if need else {}
+    nv, pxs = naver_listings(need, {norm(x) for x in PX_NAMES})
     for d in scraped:
         item = {"id": "n" + d["no"], "name": d["name"], "brokers": list(d["brokers"]), "sub": [iso(d["sub"][0]), iso(d["sub"][1])]}
         flags = []
@@ -973,6 +983,10 @@ def main():
         if "listing" not in item:
             flags.append("상장일 미정")
         po0 = old.get(item["id"], {})
+        if pxs.get(norm(d["name"])):
+            item["px"] = pxs[norm(d["name"])]
+        elif po0.get("px") and norm(d["name"]) in {norm(x) for x in PX_NAMES}:
+            item["px"] = po0["px"]   # 이번 갱신에서 못 읽었으면 직전 값을 유지
         for k in ("minq", "minq_rc", "minq_v", "acct", "fee", "elig_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
             if k not in item and k in po0:
                 item[k] = po0[k]
@@ -1095,23 +1109,5 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
-def probe():
-    out = {}
-    try:
-        t = get("https://stock.naver.com/ipo/A271160", ua=NV_UA)
-        txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
-        out["txt"] = txt[txt.find("종목코드") - 1500:txt.find("종목코드") + 300] if "종목코드" in txt else txt[:2500]
-        out["json"] = [t[max(0, m.start() - 150):m.start() + 250] for m in re.finditer(r'(?i)"(?:openPrice|closePrice|currentPrice|nowPrice|tradePrice|marketStatus|compareToPreviousClosePrice|localTradedAt)"', t)][:10]
-        out["p"] = [t[max(0, m.start() - 100):m.start() + 200] for m in re.finditer(r"시초가|종가|현재가", t)][:8]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
-    doc["probe"] = out
-    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
-
-
 if __name__ == "__main__":
-    if os.path.exists("collector/PROBE"):
-        probe()
-    else:
-        main()
+    main()
