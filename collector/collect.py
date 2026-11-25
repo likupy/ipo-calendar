@@ -1095,5 +1095,20 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = text_of(get(DETAIL.format("2319"), timeout=30))
+        out["k"] = [t[max(0, m.start() - 200):m.start() + 250] for m in re.finditer(r"경쟁률|1,312|1312", t)][:6]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
