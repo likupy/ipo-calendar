@@ -536,8 +536,10 @@ def parse_ext38(t, brokers):
                     al[b] = al.get(b, 0) + lo
                 else:
                     alr[b] = [alr.get(b, [0, 0])[0] + lo, alr.get(b, [0, 0])[1] + hi]
-    if alr and not al:   # 38 이 아직 범위로 적은 종목: 범위 그대로 보여 준다(인수회사 표에 적힌 값)
-        pass
+    if alr:   # 38 이 아직 범위로 적은 종목: 범위 그대로 보여 준다(인수회사 표에 적힌 값). 일부만 확정 숫자면 [값, 값]으로 둔다
+        for b_, v_ in al.items():
+            alr[b_] = [v_, v_]
+        al = {}
     elif gen and gen == gen_hi:   # 확정된 숫자
         if not (al and not alr and sum(al.values()) == gen):
             al = {brokers[0]: gen} if len(brokers) == 1 else {}
@@ -1034,6 +1036,20 @@ def main():
                 item[k] = po0[k]
         item["flags"] = flags
         merged[item["id"]] = item
+
+    for it_ in merged.values():   # 청약이 끝나 실적보고서가 나왔으면, 증권사별 배정 수량은 보고서의 실제 배정(균등+비례)을 쓴다
+        e_ = it_.get("ext") or {}
+        f_, fb_ = e_.get("fin") or {}, e_.get("fin_b")
+        if not f_.get("got"):
+            continue
+        al_ = None
+        if fb_ and len(fb_) == len(it_.get("brokers") or []):
+            al_ = {b: v["eq"] + v["pr"] for b, v in fb_.items()}
+        elif len(it_.get("brokers") or []) == 1:
+            al_ = {it_["brokers"][0]: f_["got"]}
+        if al_ and sum(al_.values()) == f_["got"]:
+            e_["alloc"] = al_
+            e_.pop("alloc_r", None)
 
     now_k = datetime.now(KST)
     for it_ in merged.values():   # 상장 첫날 시초가·종가(38 신규상장 목록) + 상장 당일 장중 현재가(네이버)

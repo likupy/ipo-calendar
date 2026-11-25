@@ -806,7 +806,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
         r += '<dt>최소 증거금</dt><dd><b>' + (p.price != null ? mn(p.price, p.minq[b]) : mn(p.band[0], p.minq[b]) + '–' + mn(p.band[1], p.minq[b])) + '원</b><span class="sh">' + p.minq[b] + '주</span></dd>';
       }
       if (p.ext && !p.ext.alloc && p.ext.alloc_r && p.ext.alloc_r[b]) {
-        r += '<dt>배정 수량</dt><dd>' + fmt(p.ext.alloc_r[b][0]) + '~' + fmt(p.ext.alloc_r[b][1]) + '주</dd>';
+        r += '<dt>배정 수량</dt><dd>' + (p.ext.alloc_r[b][0] === p.ext.alloc_r[b][1] ? fmt(p.ext.alloc_r[b][0]) : fmt(p.ext.alloc_r[b][0]) + '~' + fmt(p.ext.alloc_r[b][1])) + '주</dd>';
       }
       if (p.ext && p.ext.alloc && p.ext.alloc[b] != null) {
         const tot = Object.values(p.ext.alloc).reduce((a, c) => a + c, 0);
