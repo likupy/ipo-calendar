@@ -1222,23 +1222,31 @@ def main():
 
 def probe():
     out = {}
+    doc = json.load(open(OUT, encoding="utf-8"))
     try:
         h = get("https://stock.naver.com/ipo", ua=NV_UA)
-        codes = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h)))
-        names = {}
-        for c in codes:
-            t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
-            nm = re.search(r"<title>\s*([^<]*?)\s*-\s*Npay", t)
-            names[c] = nm.group(1) if nm else "?"
-            if nm and any(k in nm.group(1) for k in ("빅웨이브", "디티에스", "래블업")):
-                sn = []
-                for m in re.finditer(r"경쟁률|비례", t):
-                    sn.append(re.sub(r"\s+", " ", t[max(0, m.start() - 200):m.start() + 300]))
-                out[nm.group(1)] = [len(t), sn[:8]]
-        out["names"] = names
+        out["list_codes"] = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)))
+        for it in doc["ipos"]:
+            if it["name"] in ("엠비디", "유캐스트"):
+                corp = (it.get("ext") or {}).get("corp")
+                sc = ""
+                try:
+                    sc = (call("company.json", corp_code=corp).get("stock_code") or "").strip() if corp else ""
+                except Exception as ex:
+                    sc = "ERR " + str(ex)[:60]
+                o = {"corp": corp, "sc": sc}
+                if len(sc) == 6:
+                    try:
+                        t = get("https://stock.naver.com/ipo/A" + sc, ua=NV_UA)
+                        o["len"] = len(t)
+                        i = t.find("청약결과")
+                        o["청약결과"] = re.sub(r"\s+", " ", t[i:i + 3000]) if i >= 0 else "없음"
+                        o["title"] = (re.search(r"<title>([^<]*)", t) or [0, ""])[1]
+                    except Exception as ex:
+                        o["err"] = str(ex)[:100]
+                out[it["name"]] = o
     except Exception as ex:
         out["err"] = str(ex)[:200]
-    doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
