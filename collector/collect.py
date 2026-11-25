@@ -901,9 +901,24 @@ def scrape_nw():
     return out
 
 
+def naver_final(t):
+    """네이버 공모주 상세의 '청약결과' 증권사별 '최종 비례배정 경쟁률' -> {짧은 증권사명: 경쟁률}"""
+    out = {}
+    ms = list(re.finditer(r'IpoDetailSchedule_name[^>]*>\s*([^<]+?)\s*</span>', t))
+    for i, m in enumerate(ms):
+        seg = t[m.end():ms[i + 1].start() if i + 1 < len(ms) else m.end() + 1500]
+        r = re.search(r"최종\s*비례배정\s*경쟁률</dt><dd[^>]*>\s*([\d,]+(?:\.\d+)?)\s*:\s*1", seg)
+        b = short_broker(m.group(1))
+        if r and b:
+            v = float(r.group(1).replace(",", ""))
+            if v >= 1:
+                out[b] = v
+    return out
+
+
 def naver_listings(need, pxn=()):
     """38에 상장일이 없는 종목만, 네이버 증권 공모주 페이지의 상장일을 보조로 읽는다. {norm(이름): 'YYYY-MM-DD'}"""
-    out, px = {}, {}
+    out, px, fin = {}, {}, {}
     try:
         h = get("https://stock.naver.com/ipo", ua=NV_UA)
         codes = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h))
@@ -927,7 +942,7 @@ def naver_listings(need, pxn=()):
     except Exception as e:
         log("네이버 목록 실패(무시):", e)
     log("네이버 상장일 보조:", out, "주가:", px)
-    return out, px
+    return out, px, fin
 
 
 def main():
@@ -958,7 +973,7 @@ def main():
     today_s = datetime.now(KST).date().isoformat()
     need = {norm(d["name"]) for d in scraped if not d["listing"]}
     today_names = {norm(d["name"]) for d in scraped if d["listing"] and iso(d["listing"]) == today_s}
-    nv, pxs = naver_listings(need, today_names)
+    nv, pxs, nvfin = naver_listings(need, today_names)
     nwpx = scrape_nw()
     for d in scraped:
         item = {"id": "n" + d["no"], "name": d["name"], "brokers": list(d["brokers"]), "sub": [iso(d["sub"][0]), iso(d["sub"][1])]}
@@ -1031,7 +1046,7 @@ def main():
         if "listing" not in item:
             flags.append("상장일 미정")
         po0 = old.get(item["id"], {})
-        for k in ("minq", "minq_rc", "minq_v", "acct", "fee", "elig_v"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
+        for k in ("minq", "minq_rc", "minq_v", "acct", "fee", "elig_v", "nvr", "nvr_tried"):   # DART 에서 못 찾은 날에도 이미 읽어 둔 값은 지우지 않는다
             if k not in item and k in po0:
                 item[k] = po0[k]
         item["flags"] = flags
@@ -1050,6 +1065,25 @@ def main():
         if al_ and sum(al_.values()) == f_["got"]:
             e_["alloc"] = al_
             e_.pop("alloc_r", None)
+
+    for it_ in merged.values():   # 네이버 증권사별 최종 비례배정 경쟁률. 목록에서 빠진 지난 종목은 DART 종목코드로 상세 페이지를 직접 읽는다(종목당 한 번)
+        v_ = nvfin.get(norm(it_.get("name", "")))
+        if v_:
+            it_["nvr"] = v_
+            continue
+        e_ = it_.get("ext") or {}
+        if it_.get("nvr") or it_.get("nvr_tried") or not (e_.get("fin") and e_.get("corp")):
+            continue
+        try:
+            sc = (call("company.json", corp_code=e_["corp"]).get("stock_code") or "").strip()
+            if len(sc) == 6:
+                v_ = naver_final(get("https://stock.naver.com/ipo/A" + sc, ua=NV_UA))
+                it_["nvr_tried"] = 1
+                if v_:
+                    it_["nvr"] = v_
+                log("  네이버 최종 비례 경쟁률", it_["name"], v_)
+        except Exception as ex:
+            log("  네이버 최종 비례 경쟁률 실패", it_.get("name"), ex)
 
     now_k = datetime.now(KST)
     for it_ in merged.values():   # 상장 첫날 시초가·종가(38 신규상장 목록) + 상장 당일 장중 현재가(네이버)
