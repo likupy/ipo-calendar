@@ -44,7 +44,7 @@ jobs:
               sleep 5
             done
           fi
-      - name: 최소 증거금 못 채운 종목 이슈 갱신
+      - name: 공시에서 못 읽은 항목 이슈 갱신
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""진행·예정 종목 중 최소 증거금을 못 채운 종목을 GitHub 이슈(라벨: 최소증거금)로 알린다.
+"""공시·38 에서 읽어야 하는데 못 읽은 항목이 있는 종목을 GitHub 이슈(라벨: 읽지못함)로 알린다.
+확인 항목: 최소 증거금 · 계좌개설 · 청약수수료(진행·예정) / 최종 경쟁률 · 증권사별 경쟁률 · 유통가능 물량(청약 후).
 목록이 있으면 이슈를 만들고/갱신하고(새 종목이 늘면 댓글), 모두 채워지면 이슈를 닫는다."""
 import json, os, subprocess
 from datetime import datetime, timezone, timedelta
 
-LABEL = "최소증거금"
+LABEL = "읽지못함"
 KST = timezone(timedelta(hours=9))
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = json.load(open(os.path.join(root, "docs", "data", "ipo.json"), encoding="utf-8"))
@@ -16,14 +17,33 @@ def gh(*a):
 
 
 rows = []
+dt = lambda x: datetime.fromisoformat(x).date()
 for p in d.get("ipos", []):
-    if not p.get("sub") or p["sub"][1] < today:
+    if not p.get("sub") or p.get("withdrawn"):
         continue
+    e = p.get("ext") or {}
     why = []
-    if not p.get("margin"):
-        why.append("증거금률 없음(38)")
-    if not p.get("minq"):
-        why.append("최소 청약수량 못 읽음(DART 공시 표)")
+    if p["sub"][1] >= today:   # 진행·예정
+        if not p.get("margin"):
+            why.append("증거금률 없음(38)")
+        if not p.get("minq"):
+            why.append("최소 청약수량 못 읽음(DART 공시 표)")
+        else:   # 공시 본문은 읽었는데 증권사별 값이 빠진 경우
+            ma = [b for b in p.get("brokers", []) if b not in (p.get("acct") or {})]
+            mf = [b for b in p.get("brokers", []) if b not in (p.get("fee") or {})]
+            if ma:
+                why.append("계좌개설 못 읽음(" + ", ".join(ma) + ")")
+            if mf:
+                why.append("청약수수료 못 읽음(" + ", ".join(mf) + ")")
+    else:   # 청약이 끝난 종목: 공시가 올라올 시간이 지난 뒤에만 확인
+        done_days = (dt(today) - dt(p["sub"][1])).days
+        d_ = e.get("dart") or {}
+        if d_.get("실적") and not e.get("fin") and done_days >= 1:
+            why.append("실적보고서 표를 못 읽음(최종 경쟁률)")
+        elif e.get("fin") and len(p.get("brokers", [])) > 1 and not e.get("fin_b"):
+            why.append("증권사별 최종 경쟁률 못 읽음")
+        if e.get("comp") and not p.get("spac") and not e.get("free") and done_days >= 1:
+            why.append("유통가능 물량 못 읽음")
     if why:
         rows.append((p["name"], p["sub"][0][5:] + "~" + p["sub"][1][5:], ", ".join(why)))
 
@@ -35,14 +55,14 @@ body_old = cur[0]["body"] if cur else ""
 
 if not rows:
     if num:
-        gh("issue", "close", str(num), "--comment", "모든 진행·예정 종목의 최소 증거금이 채워졌어요.")
+        gh("issue", "close", str(num), "--comment", "못 읽은 항목이 모두 채워졌어요.")
     print("미확인 종목 없음")
     raise SystemExit
 
-body = ("아래 진행·예정 종목은 최소 증거금을 표시하지 못하고 있어요. Claude에게 종목 이름을 알려주면 공시 표 형식을 확인해 읽는 규칙을 고쳐요.\n\n"
+body = ("아래 종목은 일부 항목을 표시하지 못하고 있어요. Claude에게 종목 이름을 알려주면 공시 표 형식을 확인해 읽는 규칙을 고쳐요.\n\n"
         + "\n".join(f"- **{n}** (청약 {s}): {w}" for n, s, w in rows)
         + f"\n\n(마지막 확인 {datetime.now(KST).strftime('%m/%d %H:%M')})")
-title = f"최소 증거금 못 채운 종목 {len(rows)}개"
+title = f"공시에서 못 읽은 항목이 있는 종목 {len(rows)}개"
 if not num:
     gh("issue", "create", "--label", LABEL, "--title", title, "--body", body)
 else:
