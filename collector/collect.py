@@ -1151,5 +1151,24 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    for no in ['2364', '2357', '2359', '2350', '2353', '2360']:
+        try:
+            t = text_of(get(DETAIL.format(no), timeout=30))
+            i = t.find("총공모주식수")
+            j = t.find("공모사항")
+            k = t.find("인수회사")
+            out[no] = [t[max(0, i - 50):i + 400], t[j:j + 700], t[k:k + 500] if k >= 0 else ""]
+        except Exception as ex:
+            out[no] = str(ex)[:100]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
