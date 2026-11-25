@@ -1095,5 +1095,23 @@ def main():
             log(f"  ! {p['name']}: {', '.join(p['flags'])}")
 
 
+def probe():
+    out = {}
+    try:
+        t = get("https://stock.naver.com/ipo/A271160", ua=NV_UA)
+        txt = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
+        out["txt"] = txt[txt.find("종목코드") - 1500:txt.find("종목코드") + 300] if "종목코드" in txt else txt[:2500]
+        out["json"] = [t[max(0, m.start() - 150):m.start() + 250] for m in re.finditer(r'(?i)"(?:openPrice|closePrice|currentPrice|nowPrice|tradePrice|marketStatus|compareToPreviousClosePrice|localTradedAt)"', t)][:10]
+        out["p"] = [t[max(0, m.start() - 100):m.start() + 200] for m in re.finditer(r"시초가|종가|현재가", t)][:8]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
+    doc = json.load(open(OUT, encoding="utf-8"))
+    doc["probe"] = out
+    json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
+
+
 if __name__ == "__main__":
-    main()
+    if os.path.exists("collector/PROBE"):
+        probe()
+    else:
+        main()
