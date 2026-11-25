@@ -1188,16 +1188,31 @@ def main():
 
 def probe():
     out = {}
-    for nm, rc in [("big", "20260918000412"), ("dts", "20261016000472"), ("rbl", "20261027000261")]:
+    def ctx(t, pats):
+        r = []
+        for pt in pats:
+            for m in re.finditer(pt, t):
+                r.append(t[max(0, m.start() - 250):m.start() + 250])
+        return r[:6]
+    try:
+        tt = text_of(get(DETAIL.format("2294"), timeout=30))
+        out["38"] = ctx(tt, [r"2,?840", r"2,?655", r"비례"])
+        out["38b"] = [tt[i:i + 700] for i in [m.start() for m in re.finditer(r"청약경쟁률|일반청약자 경쟁률|증권사별", tt)][:3]]
+    except Exception as ex:
+        out["38"] = str(ex)[:100]
+    for nm, rc in [("실적", "20260918000412")]:
         try:
             t = fetch_doc_text(rc)
-            o = []
-            for m in re.finditer(r"합계\s", t):
-                o.append(t[max(0, m.start() - 60):m.start() + 1100])
-            o2 = [t[m.start() - 100:m.start() + 700] for m in re.finditer(r"미래에셋증권\(주\)는 비례|비례청약 경쟁률|비례배정방식 배정물량|비례배정 경쟁률", t)]
-            out[nm] = [o[-3:], o2[:3]]
+            out[nm] = ctx(t, [r"2,?840\.", r"2,?655\.", r"2,?840", r"2,?655"])
         except Exception as ex:
-            out[nm] = str(ex)[:200]
+            out[nm] = str(ex)[:100]
+    for k in ("설명서", "신고서"):
+        try:
+            rc = {"설명서": "20260914000385", "신고서": "20260914000379"}[k]
+            t = fetch_doc_text(rc)
+            out[k] = ctx(t, [r"2,?840\.", r"2,?655\."])
+        except Exception as ex:
+            out[k] = str(ex)[:100]
     doc = json.load(open(OUT, encoding="utf-8"))
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
