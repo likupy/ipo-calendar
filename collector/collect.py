@@ -1223,15 +1223,28 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    bases = ["https://api.stock.naver.com", "https://m.stock.naver.com/api", "https://stock.naver.com/api", "https://m.stock.naver.com/front-api", "https://stock.naver.com/front-api", "https://api.stock.naver.com/api"]
-    for bs in bases:
-        for pth in ("/ipo/progress", "/ipo/subscribing", "/ipo/recent"):
-            u = bs + pth
+    B = "https://m.stock.naver.com/front-api/ipo/"
+    for pth in ("progress", "recent", "progress?ipoProgressType=청약완료", "progress?ipoProgressType=상장예정", "recent?page=1", "recent?pageSize=30&page=1", "progress?page=1&pageSize=30"):
+        u = B + urllib.parse.quote(pth, safe="/?=&")
+        try:
+            t = get(u, ua=NV_UA)
+            out[pth] = [len(t), "유캐스트" in t, t[:200]]
+        except Exception as ex:
+            out[pth] = str(ex)[:80]
+    try:
+        t = get("https://stock.naver.com/market/stock/kr/ipo", ua=NV_UA)
+        js = sorted(set(re.findall(r'src="(https://ssl\.pstatic\.net/imgstock/fn/real/_next/static/[^"]+\.js)"', t)))
+        ctx = []
+        for u in js:
             try:
-                t = get(u, ua=NV_UA)
-                out[u] = [len(t), "유캐스트" in t, t[:300]]
-            except Exception as ex:
-                out[u] = str(ex)[:60]
+                j = get(u, ua=NV_UA)
+            except Exception:
+                continue
+            for m in re.finditer(r"ipoProgressType|front-api/ipo|IPO\.PROGRESS|ipo/progress", j):
+                ctx.append(j[max(0, m.start() - 200):m.start() + 300])
+        out["ctx"] = ctx[:8]
+    except Exception as ex:
+        out["err"] = str(ex)[:100]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
