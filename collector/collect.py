@@ -985,6 +985,49 @@ def naver_listings(need, pxn=()):
     return out, px, fin
 
 
+def derive_alloc(merged):
+    for it_ in merged.values():   # 공시(정정 후 표)에서 확정 배정을 읽은 단일 증권사 종목은 그 숫자를 배정 수량으로 쓴다
+        e_ = it_.get("ext") or {}
+        if e_.get("gen_d") and not e_.get("alloc") and len(it_.get("brokers") or []) == 1:
+            lo_, hi_ = (e_.get("alloc_r") or {}).get(it_["brokers"][0], [None, None])
+            if lo_ is None or lo_ <= e_["gen_d"] <= hi_:
+                e_["alloc"] = {it_["brokers"][0]: e_["gen_d"]}
+                e_.pop("alloc_r", None)
+
+    for it_ in merged.values():   # 청약이 끝나 실적보고서가 나왔으면, 증권사별 배정 수량은 보고서의 실제 배정(균등+비례)을 쓴다
+        e_ = it_.get("ext") or {}
+        f_, fb_ = e_.get("fin") or {}, e_.get("fin_b")
+        if not f_.get("got"):
+            continue
+        al_ = None
+        if fb_ and len(fb_) == len(it_.get("brokers") or []):
+            al_ = {b: v["eq"] + v["pr"] for b, v in fb_.items()}
+        elif len(it_.get("brokers") or []) == 1:
+            al_ = {it_["brokers"][0]: f_["got"]}
+        if al_ and sum(al_.values()) == f_["got"]:
+            e_["alloc"] = al_
+            e_.pop("alloc_r", None)
+
+    for it_ in merged.values():   # 네이버 증권사별 최종 비례배정 경쟁률. 목록에서 빠진 지난 종목은 DART 종목코드로 상세 페이지를 직접 읽는다(종목당 한 번)
+        v_ = nvfin.get(norm(it_.get("name", "")))
+        if v_:
+            it_["nvr"] = v_
+            continue
+        e_ = it_.get("ext") or {}
+        if it_.get("nvr") or it_.get("nvr_tried") or not (e_.get("fin") and e_.get("corp")):
+            continue
+        try:
+            sc = (call("company.json", corp_code=e_["corp"]).get("stock_code") or "").strip()
+            if len(sc) == 6:
+                v_ = naver_final(get("https://stock.naver.com/ipo/A" + sc, ua=NV_UA))
+                it_["nvr_tried"] = 1
+                if v_:
+                    it_["nvr"] = v_
+                log("  네이버 최종 비례 경쟁률", it_["name"], v_)
+        except Exception as ex:
+            log("  네이버 최종 비례 경쟁률 실패", it_.get("name"), ex)
+
+
 def main():
     if not os.environ.get("DART_API_KEY"):
         sys.exit("DART_API_KEY 환경변수가 없습니다.")
@@ -1092,47 +1135,6 @@ def main():
         item["flags"] = flags
         merged[item["id"]] = item
 
-    for it_ in merged.values():   # 공시(정정 후 표)에서 확정 배정을 읽은 단일 증권사 종목은 그 숫자를 배정 수량으로 쓴다
-        e_ = it_.get("ext") or {}
-        if e_.get("gen_d") and not e_.get("alloc") and len(it_.get("brokers") or []) == 1:
-            lo_, hi_ = (e_.get("alloc_r") or {}).get(it_["brokers"][0], [None, None])
-            if lo_ is None or lo_ <= e_["gen_d"] <= hi_:
-                e_["alloc"] = {it_["brokers"][0]: e_["gen_d"]}
-                e_.pop("alloc_r", None)
-
-    for it_ in merged.values():   # 청약이 끝나 실적보고서가 나왔으면, 증권사별 배정 수량은 보고서의 실제 배정(균등+비례)을 쓴다
-        e_ = it_.get("ext") or {}
-        f_, fb_ = e_.get("fin") or {}, e_.get("fin_b")
-        if not f_.get("got"):
-            continue
-        al_ = None
-        if fb_ and len(fb_) == len(it_.get("brokers") or []):
-            al_ = {b: v["eq"] + v["pr"] for b, v in fb_.items()}
-        elif len(it_.get("brokers") or []) == 1:
-            al_ = {it_["brokers"][0]: f_["got"]}
-        if al_ and sum(al_.values()) == f_["got"]:
-            e_["alloc"] = al_
-            e_.pop("alloc_r", None)
-
-    for it_ in merged.values():   # 네이버 증권사별 최종 비례배정 경쟁률. 목록에서 빠진 지난 종목은 DART 종목코드로 상세 페이지를 직접 읽는다(종목당 한 번)
-        v_ = nvfin.get(norm(it_.get("name", "")))
-        if v_:
-            it_["nvr"] = v_
-            continue
-        e_ = it_.get("ext") or {}
-        if it_.get("nvr") or it_.get("nvr_tried") or not (e_.get("fin") and e_.get("corp")):
-            continue
-        try:
-            sc = (call("company.json", corp_code=e_["corp"]).get("stock_code") or "").strip()
-            if len(sc) == 6:
-                v_ = naver_final(get("https://stock.naver.com/ipo/A" + sc, ua=NV_UA))
-                it_["nvr_tried"] = 1
-                if v_:
-                    it_["nvr"] = v_
-                log("  네이버 최종 비례 경쟁률", it_["name"], v_)
-        except Exception as ex:
-            log("  네이버 최종 비례 경쟁률 실패", it_.get("name"), ex)
-
     now_k = datetime.now(KST)
     for it_ in merged.values():   # 상장 첫날 시초가·종가(38 신규상장 목록) + 상장 당일 장중 현재가(네이버)
         if not it_.get("name") or not it_.get("listing"):
@@ -1165,6 +1167,7 @@ def main():
         enrich(merged, old, {k: v.get("alias", []) for k, v in ov0.items()})
     except Exception as e:
         log("상세 확장 실패(무시):", e)
+    derive_alloc(merged)
 
     # 공시 표만으로는 확정할 수 없어 사람이 직접 확인한 값(collector/overrides.json)은 항상 우선한다
     try:
