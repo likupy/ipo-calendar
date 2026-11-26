@@ -558,6 +558,15 @@ def parse_ext38(t, brokers):
     return e
 
 
+def parse_gen_doc(t):
+    """증권신고서·투자설명서의 '정정 후' 청약대상자 유형별 표에서 확정된 일반청약자 배정 주식수(범위가 아닌 숫자 하나, '확정공모가액' 기준 문구가 뒤따르는 것)."""
+    got = None
+    for m in re.finditer(r"일반청약자\s+([\d,]+)\s*주\s+[\d.]+\s*%\s+[\d,]+\s*원", t):
+        if "확정공모가액" in t[m.end():m.end() + 400]:
+            got = num(m.group(1))
+    return got
+
+
 def plan_eq(t, eq):
     """균등방식으로 배정하기로 했던 물량. 공시가 '일반배정물량 N주 중 M주(X%)를 균등방식…' 또는 '총 M주를 균등배정하였습니다'로 밝힌 경우 그 값, 밝힌 게 없으면 실제 균등 배정 수량."""
     vals = {num(m) for m in re.findall(r"일반\s*배정\s*물량\s*[\d,]+\s*주\s*중\s*([\d,]+)\s*주\s*\([\d.]+\s*%\)\s*를\s*균등\s*방식", t)}
@@ -811,6 +820,18 @@ def enrich(merged, old, alias):
                 reps = dart_reports(e["corp"], sub0)
                 if reps:
                     e["dart"] = reps
+                rc_ = "/".join(reps.get(k, "") for k in ("설명서", "신고서"))
+                if e.get("alloc_r") and rc_ and e.get("gen_rc") != rc_:   # 38 이 아직 범위로만 적은 종목: 공시의 '정정 후' 표에 확정 배정이 있으면 읽는다
+                    try:
+                        for k_ in ("설명서", "신고서"):
+                            if reps.get(k_):
+                                g_ = parse_gen_doc(fetch_doc_text(reps[k_]))
+                                if g_:
+                                    e["gen_d"] = g_
+                                    break
+                        e["gen_rc"] = rc_
+                    except Exception as ex3:
+                        log("  공시 확정 배정 읽기 실패(다음에 재시도)", it["name"], ex3)
                 if reps.get("설명서") and not e.get("free"):   # 38 에 '공모 후 유통가능 물량' 표가 없는 종목은 투자설명서에서 읽는다
                     fr = parse_free_doc(fetch_doc_text(reps["설명서"]))
                     if fr:
@@ -1070,6 +1091,14 @@ def main():
                 item[k] = po0[k]
         item["flags"] = flags
         merged[item["id"]] = item
+
+    for it_ in merged.values():   # 공시(정정 후 표)에서 확정 배정을 읽은 단일 증권사 종목은 그 숫자를 배정 수량으로 쓴다
+        e_ = it_.get("ext") or {}
+        if e_.get("gen_d") and not e_.get("alloc") and len(it_.get("brokers") or []) == 1:
+            lo_, hi_ = (e_.get("alloc_r") or {}).get(it_["brokers"][0], [None, None])
+            if lo_ is None or lo_ <= e_["gen_d"] <= hi_:
+                e_["alloc"] = {it_["brokers"][0]: e_["gen_d"]}
+                e_.pop("alloc_r", None)
 
     for it_ in merged.values():   # 청약이 끝나 실적보고서가 나왔으면, 증권사별 배정 수량은 보고서의 실제 배정(균등+비례)을 쓴다
         e_ = it_.get("ext") or {}
