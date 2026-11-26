@@ -3792,41 +3792,76 @@
   }
  ],
  "probe": {
-  "https://stock.naver.com/ipo/recent": [
-   13308,
-   [],
-   false,
-   false,
-   [
-    "Npay 증권"
-   ]
+  "len": 72351,
+  "hrefs": [
+   "#",
+   "/",
+   "/ipo/A0111R0",
+   "/ipo/A0111R0/discussion",
+   "/ipo/A0147B0",
+   "/ipo/A0153R0",
+   "/ipo/A0162D0",
+   "/ipo/A271160",
+   "/ipo/A345290",
+   "/ipo/A471800",
+   "/ipo/A493260",
+   "/ipo/A493410",
+   "/ipo/A495910",
+   "/ipo/A498150",
+   "/ipo/recent",
+   "/search",
+   "https://fin.land.naver.com/",
+   "https://help.pay.naver.com/faq/alias/finance.help",
+   "https://help.pay.naver.com/faq/content.help?faqId=17162",
+   "https://help.pay.naver.com/mail/form.help?alias=finance",
+   "https://home.pay.naver.com",
+   "https://home.pay.naver.com/",
+   "https://loan.pay.naver.com/n/credit?from=ipostocks1",
+   "https://m.naver.com/",
+   "https://m.naver.com/services.html",
+   "https://m.stock.naver.com/",
+   "https://m.stock.naver.com/notice",
+   "https://new-m.pay.naver.com/historybenefit/home",
+   "https://new-m.pay.naver.com/member/payservice",
+   "https://new-m.pay.naver.com/member/terms-policy",
+   "https://new-m.pay.naver.com/member/terms-policy/privacy",
+   "https://point.pay.naver.com/main",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/ipo_banner.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-114.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-120.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-144.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-152.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-180.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-192.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-57.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-60.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-72.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-76.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/favicon-96.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/graph/graph.svg",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/pay/favicon-16x16.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/v240605/pay/favicon-32x32.png",
+   "https://ssl.pstatic.net/imgstock/fn/real/_front/manifest.json",
+   "https://ssl.pstatic.net/imgstock/fn/real/_next/static/css/1bd229e09f6334d2.css",
+   "https://ssl.pstatic.net/imgstock/fn/real/_next/static/css/2d3464153818678b.css",
+   "https://ssl.pstatic.net/imgstock/fn/real/_next/static/css/483f24c40f2ab753.css",
+   "https://ssl.pstatic.net/imgstock/fn/real/_next/static/css/6b733430d739ca2b.css",
+   "https://ssl.pstatic.net/imgstock/fn/real/_next/static/css/d981cd41cc561faa.css"
   ],
-  "https://stock.naver.com/ipo/upcoming": [
-   39957,
-   [],
-   false,
-   false,
-   [
-    "Npay 증권"
-   ]
+  "codes": [
+   "A0111R0",
+   "A0147B0",
+   "A0153R0",
+   "A0162D0",
+   "A271160",
+   "A345290",
+   "A471800",
+   "A493260",
+   "A493410",
+   "A495910",
+   "A498150"
   ],
-  "https://stock.naver.com/ipo/subscription": [
-   39981,
-   [],
-   false,
-   false,
-   [
-    "Npay 증권"
-   ]
-  ],
-  "https://stock.naver.com/ipo/schedule": [
-   39957,
-   [],
-   false,
-   false,
-   [
-    "Npay 증권"
-   ]
-  ]
+  "uc": false,
+  "ctx": ""
  }
 }
