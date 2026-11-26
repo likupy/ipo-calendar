@@ -1223,23 +1223,15 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    try:
-        t = get("https://stock.naver.com/market/stock/kr/ipo", ua=NV_UA)
-        js = sorted(set(re.findall(r'src="(https://ssl\.pstatic\.net/imgstock/fn/real/_next/static/[^"]+\.js)"', t)))
-        out["njs"] = len(js)
-        hits = []
-        for u in js:
+    bases = ["https://api.stock.naver.com", "https://m.stock.naver.com/api", "https://stock.naver.com/api", "https://m.stock.naver.com/front-api", "https://stock.naver.com/front-api", "https://api.stock.naver.com/api"]
+    for bs in bases:
+        for pth in ("/ipo/progress", "/ipo/subscribing", "/ipo/recent"):
+            u = bs + pth
             try:
-                j = get(u, ua=NV_UA)
-            except Exception:
-                continue
-            for m in re.finditer(r"[\"'`]([^\"'`]{0,90}(?:ipo|Ipo|IPO)[^\"'`]{0,90})[\"'`]", j):
-                x = m.group(1)
-                if "/" in x and len(x) < 160:
-                    hits.append(x)
-        out["hits"] = sorted(set(hits))[:80]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
+                t = get(u, ua=NV_UA)
+                out[u] = [len(t), "유캐스트" in t, t[:300]]
+            except Exception as ex:
+                out[u] = str(ex)[:60]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
