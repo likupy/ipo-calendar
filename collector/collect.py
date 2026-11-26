@@ -1225,12 +1225,19 @@ def probe():
     doc = json.load(open(OUT, encoding="utf-8"))
     try:
         t = get("https://stock.naver.com/market/stock/kr/ipo", ua=NV_UA)
-        out["len"] = len(t)
-        out["hrefs"] = sorted(set(re.findall(r'href="([^"]+)"', t)))[:60]
-        out["codes"] = sorted(set(re.findall(r"/([A-Z0-9]{7})\b", t)))[:60]
-        out["uc"] = "유캐스트" in t
-        i = t.find("유캐스트")
-        out["ctx"] = re.sub(r"\s+", " ", t[max(0, i - 500):i + 500]) if i >= 0 else ""
+        js = sorted(set(re.findall(r'src="(https://ssl\.pstatic\.net/imgstock/fn/real/_next/static/[^"]+\.js)"', t)))
+        out["njs"] = len(js)
+        hits = []
+        for u in js:
+            try:
+                j = get(u, ua=NV_UA)
+            except Exception:
+                continue
+            for m in re.finditer(r"[\"'`]([^\"'`]{0,90}(?:ipo|Ipo|IPO)[^\"'`]{0,90})[\"'`]", j):
+                x = m.group(1)
+                if "/" in x and len(x) < 160:
+                    hits.append(x)
+        out["hits"] = sorted(set(hits))[:80]
     except Exception as ex:
         out["err"] = str(ex)[:200]
     doc["probe"] = out
