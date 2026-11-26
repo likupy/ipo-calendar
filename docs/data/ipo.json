@@ -3792,18 +3792,6 @@
   }
  ],
  "probe": {
-  "progress": "https://m.stock.naver.com/front-api/ipo/progress: HTTP Error 400: Bad Request",
-  "recent": "https://m.stock.naver.com/front-api/ipo/recent: HTTP Error 400: Bad Request",
-  "progress?ipoProgressType=청약완료": "https://m.stock.naver.com/front-api/ipo/progress?ipoProgressType=%EC%B2%AD%EC%95",
-  "progress?ipoProgressType=상장예정": "https://m.stock.naver.com/front-api/ipo/progress?ipoProgressType=%EC%83%81%EC%9E",
-  "recent?page=1": "https://m.stock.naver.com/front-api/ipo/recent?page=1: HTTP Error 400: Bad Reque",
-  "recent?pageSize=30&page=1": "https://m.stock.naver.com/front-api/ipo/recent?pageSize=30&page=1: HTTP Error 40",
-  "progress?page=1&pageSize=30": "https://m.stock.naver.com/front-api/ipo/progress?page=1&pageSize=30: HTTP Error ",
-  "ctx": [
-   "DEFAULT,getNextPageParam:(t,e)=>{if(!(t?.result?.items?.length<s.IV.IPO.CONTENTS_LIST))return e.length+1}}),L=(0,n.rP)(t=>({url:\"ipo/v2/detail/contents\",method:\"get\",params:t})),d=(0,n.rP)(t=>({url:\"/ipo/progress\",method:\"get\",params:t})),f=(0,n.HE)((t,e)=>({url:\"/ipo/progress\",method:\"get\",params:{...t,page:e}}),{initialPageParam:s.gy.DEFAULT,getNextPageParam:(t,e)=>{if(!(t?.result?.ipoList?.length<s.IV.IPO.HOME_PROGRESS_SECTION.DEFAULT))return e.length+1}}),h=(0,n.rP)(t=>({url:\"ipo/affiliatedO",
-   "IV.IPO.CONTENTS_LIST))return e.length+1}}),L=(0,n.rP)(t=>({url:\"ipo/v2/detail/contents\",method:\"get\",params:t})),d=(0,n.rP)(t=>({url:\"/ipo/progress\",method:\"get\",params:t})),f=(0,n.HE)((t,e)=>({url:\"/ipo/progress\",method:\"get\",params:{...t,page:e}}),{initialPageParam:s.gy.DEFAULT,getNextPageParam:(t,e)=>{if(!(t?.result?.ipoList?.length<s.IV.IPO.HOME_PROGRESS_SECTION.DEFAULT))return e.length+1}}),h=(0,n.rP)(t=>({url:\"ipo/affiliatedOrg\",method:\"get\",params:t}))},76541:function(t){t.exports={flag:\"",
-   "}),n({params:{[h.wq.PROGRESS_TYPE]:_.key}}),(0,Z.C)({event:e,area:A.Z[_.key].tab})}})),[p,l,s,n]),{toggleLayer:N,closeLayer:B}=(0,__.Z)();return(0,a.jsxs)(a.Fragment,{children:[(0,a.jsx)(\"h2\",{id:q.t.IPO.PROGRESS,className:_a(\"title\"),children:\"공모주 진행 현황\"}),(0,a.jsx)(\"div\",{className:_a(\"chip\"),children:(0,a.jsx)(g.Z,{items:L,paddingType:k.R7.PADDING20})}),l===h.Hs.수요예측&&(0,a.jsx)(\"div\",{className:_a(\"area-banner\"),children:(0,a.jsxs)(\"button\",{type:\"button\",className:_a(\"banner\"),onClick:()=>{o",
-   "ingSPAC:e}=_,t=(0,r.useRef)(null),[n,s]=(0,_2.Z)(!1),[o,i]=(0,_5.Z)([h.BR]),[l,p]=(0,_2.Z)(e),[c,u]=(0,_2.Z)(!1),{data:{result:R}={},isSuccess:I,isPending:g,error:k,refetch:D}=(0,G.a)(_e.qq.query()),{ipoProgressType:d=\"청약중\",ipoList:S=[]}=R??{},L=\"청약중\"===d,{S:N=0,G:B=0,R:P=0}=_7()(S,\"gsrClass\"),K=0===N||B+P===0,M=K||l?S:S.filter(_=>{let{gsrClass:e}=_;return e!==h.gc.S}),y=L||c?M:M?.slice(0,4),x=L?h.id.청약중:h.id.청약예정;return I&&!L&&0===S.length?(0,a.jsx)(ea,{isShowingSubscribing:!1}):(0,a.jsxs)(a.Fr"
-  ]
+  "ok": {}
  }
 }
