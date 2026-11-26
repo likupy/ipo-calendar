@@ -3792,79 +3792,41 @@
   }
  ],
  "probe": {
-  "len": 72351,
-  "hrefs": [
-   "/ipo/A0111R0",
-   "/ipo/A0111R0/discussion",
-   "/ipo/A0147B0",
-   "/ipo/A0153R0",
-   "/ipo/A0162D0",
-   "/ipo/A271160",
-   "/ipo/A345290",
-   "/ipo/A471800",
-   "/ipo/A493260",
-   "/ipo/A493410",
-   "/ipo/A495910",
-   "/ipo/A498150",
-   "/ipo/recent",
-   "https://loan.pay.naver.com/n/credit?from=ipostocks1",
-   "https://ssl.pstatic.net/imgstock/fn/real/_front/image/ipo_banner.png"
-  ],
-  "apis": [
-   "https://loan.pay.naver.com/n/credit?from=ipostocks1",
-   "https://m.stock.naver.com/ipo"
-  ],
-  "tabs": [
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"true\" class=\"LineTab-module_link__MCdtL LineTab-module_is-selected__Uty3h\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><",
-   "role=\"tab\" aria-selected=\"false\" class=\"LineTab-module_link__MCdtL\"><"
-  ],
-  "uc": [],
-  "itemcodes": [],
-  "https://stock.naver.com/ipo?tab=ALL": [
-   72378,
+  "https://stock.naver.com/ipo/recent": [
+   13308,
+   [],
+   false,
+   false,
    [
-    "A0111R0",
-    "A0147B0",
-    "A0153R0",
-    "A0162D0",
-    "A271160",
-    "A345290",
-    "A471800",
-    "A493260",
-    "A493410",
-    "A495910",
-    "A498150"
-   ],
-   false
+    "Npay 증권"
+   ]
   ],
-  "https://m.stock.naver.com/ipo": [
-   72351,
-   [
-    "A0111R0",
-    "A0147B0",
-    "A0153R0",
-    "A0162D0",
-    "A271160",
-    "A345290",
-    "A471800",
-    "A493260",
-    "A493410",
-    "A495910",
-    "A498150"
-   ],
-   false
-  ],
-  "https://stock.naver.com/ipo/calendar": [
+  "https://stock.naver.com/ipo/upcoming": [
    39957,
    [],
-   false
+   false,
+   false,
+   [
+    "Npay 증권"
+   ]
+  ],
+  "https://stock.naver.com/ipo/subscription": [
+   39981,
+   [],
+   false,
+   false,
+   [
+    "Npay 증권"
+   ]
+  ],
+  "https://stock.naver.com/ipo/schedule": [
+   39957,
+   [],
+   false,
+   false,
+   [
+    "Npay 증권"
+   ]
   ]
  }
 }
