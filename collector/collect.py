@@ -1237,23 +1237,17 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    try:
-        base = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", get("https://stock.naver.com/ipo", ua=NV_UA)))
-        extra = {}
-        for pt in ("listing-upcoming", "subscribing", "subscribing-upcoming"):
-            lst = (json.loads(get(f"https://m.stock.naver.com/front-api/ipo/progress?progressType={pt}&page=1", ua=NV_UA)).get("result") or {}).get("ipoList") or []
-            for x in lst:
-                extra[x["ipoCode"]] = [pt, x.get("compName")]
-        out["extra"] = {k: v for k, v in extra.items() if k not in base}
-        for c, v in out["extra"].items():
+    for c, nm in (("A0231Y0", "신영스팩12호"), ("A0175C0", "유캐스트"), ("A498150", "엠비디"), ("A0147B0", "래블업")):
+        try:
             t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
-            i = t.find("청약결과")
-            o = {"len": len(t), "title": (re.search(r"<title>([^<]*)", t) or [0, ""])[1]}
-            o["결과"] = re.sub(r"\s+", " ", t[i:i + 2500]) if i >= 0 else "없음"
-            o["비례"] = [re.sub(r"\s+", " ", t[max(0, m.start() - 150):m.start() + 250]) for m in re.finditer(r"비례", t)][:4]
-            out[c] = o
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
+            info = re.findall(r'IpoDetailInfo_term[^>]*>([^<]+)</dt><dd[^>]*>(.*?)</dd>', t)
+            res = []
+            for m in re.finditer(r'IpoDetailSchedule_name[^>]*>\s*([^<]+?)\s*</span>', t):
+                res.append(re.sub(r"<[^>]+>", " ", re.sub(r"\s+", " ", t[m.end():m.end() + 1400]))[:400])
+            tot = re.findall(r"통합 경쟁률[^<]*", t)[:2]
+            out[nm] = {"info": [(k, re.sub(r"<[^>]+>", "", v)) for k, v in info], "res": res, "tot": tot}
+        except Exception as ex:
+            out[nm] = str(ex)[:100]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
