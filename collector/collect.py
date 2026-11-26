@@ -1224,13 +1224,21 @@ def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
     try:
-        t = get("https://stock.naver.com/ipo/A0111R0", ua=NV_UA)
-        out["title"] = (re.search(r"<title>([^<]*)", t) or [0, ""])[1]
-        i = t.find("청약결과")
-        out["결과"] = re.sub(r"\s+", " ", t[i:i + 3500]) if i >= 0 else "없음"
-        out["names"] = re.findall(r'IpoDetailSchedule_name[^>]*>\s*([^<]+?)\s*</span>', t)
+        h = get("https://stock.naver.com/ipo", ua=NV_UA)
+        out["len"] = len(h)
+        out["hrefs"] = sorted(set(re.findall(r'href="([^"]*ipo[^"]*)"', h)))[:40]
+        out["apis"] = sorted(set(re.findall(r'https?://[a-z.]*naver[a-z.]*/[^"\\\s]*ipo[^"\\\s]*', h)))[:30]
+        out["tabs"] = re.findall(r'(?:aria-selected|role="tab")[^>]*>[^<]{0,30}<', h)[:12]
+        out["uc"] = [re.sub(r"\s+", " ", h[max(0, m.start() - 300):m.start() + 300]) for m in re.finditer(r"유캐스트", h)][:3]
+        out["itemcodes"] = re.findall(r'"itemCode":"([A-Z0-9]+)","[a-zA-Z]+":"?([^",]*)', h)[:40]
     except Exception as ex:
         out["err"] = str(ex)[:200]
+    for u in ("https://stock.naver.com/ipo?tab=ALL", "https://m.stock.naver.com/ipo", "https://stock.naver.com/ipo/calendar"):
+        try:
+            t = get(u, ua=NV_UA)
+            out[u] = [len(t), sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", t))), "유캐스트" in t]
+        except Exception as ex:
+            out[u] = str(ex)[:80]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
