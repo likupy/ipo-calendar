@@ -736,10 +736,16 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       if (f && (f.n_fin || f.n) && f.req != null && f.eq_p != null && p.brokers.length === 1) { const x = one(p.brokers[0], f.n_fin || f.n, f.req, f.eq_p, f.gen || (e.alloc || {})[p.brokers[0]]); if (x) rowsFin.push(x); }
       else if (e.fin_b && p.brokers.length > 1 && p.brokers.every(b => e.fin_b[b] && e.fin_b[b].n)) { const xs = p.brokers.map(b => { const q = e.fin_b[b]; const A = (e.alloc || {})[b] || (q.req > q.eq + q.pr ? q.eq + q.pr : null); return one(b, q.n, q.req, q.eq_p, A); }); if (xs.every(Boolean)) xs.forEach(x => rowsFin.push(x)); }
     }
+    let calcNote = false;
+    if (!rowsFin.length && p.nvr && p.nvx && e.alloc && p.margin && p.price != null) {   /* 실적보고서 전: 네이버 종합·비례 경쟁률의 비가 1:2(균등 50%)로 확인되면 확정 일반 배정의 절반 ÷ 청약건수 */
+      p.brokers.forEach(b => { const A = e.alloc[b], P = p.nvr[b], x = p.nvx[b]; if (A && P && x && x.n && Math.abs(x.c / P - 0.5) < 0.005) { rowsFin.push([b, A / 2 / x.n, P]); calcNote = true; } });
+      if (rowsFin.length !== p.brokers.length) { rowsFin.length = 0; calcNote = false; }
+    }
     if (rowsFin.length && p.nvr) rowsFin.forEach(r => { if (p.nvr[r[0]] > 0) r[2] = Math.max(1, p.nvr[r[0]]); });
     if (rowsFin.length) {
       h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr>' + rowsFin.map(r =>
         '<tr><td>' + esc(BN[r[0]] || (r[0] + '증권')) + '</td><td>' + f2(r[1]) + '주</td><td>' + (r[2] == null ? '-' : fmt(Math.round(+r[2].toFixed(2) * p.price * p.margin / 100)) + '원') + '</td></tr>').join('') + '</table>';
+      if (calcNote) h += '<div class="t">실적보고서 공시 전 계산값이에요. 공시가 나오면 바뀔 수 있어요.</div>';
     } else if (f) {
       h += '<div class="w">증권사별 결과는 공시를 확인한 뒤 표시돼요.</div>';
     } else if (ended) {
