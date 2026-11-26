@@ -1223,15 +1223,16 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    for u in ("https://stock.naver.com/ipo/recent", "https://stock.naver.com/ipo/upcoming", "https://stock.naver.com/ipo/subscription", "https://stock.naver.com/ipo/schedule"):
-        try:
-            t = get(u, ua=NV_UA)
-            out[u] = [len(t), sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", t))), "유캐스트" in t, "신영스팩" in t, re.findall(r'<title>([^<]*)', t)[:1]]
-            if "유캐스트" in t:
-                i = t.find("유캐스트")
-                out[u + "ctx"] = re.sub(r"\s+", " ", t[max(0, i - 600):i + 400])
-        except Exception as ex:
-            out[u] = str(ex)[:80]
+    try:
+        t = get("https://stock.naver.com/market/stock/kr/ipo", ua=NV_UA)
+        out["len"] = len(t)
+        out["hrefs"] = sorted(set(re.findall(r'href="([^"]+)"', t)))[:60]
+        out["codes"] = sorted(set(re.findall(r"/([A-Z0-9]{7})\b", t)))[:60]
+        out["uc"] = "유캐스트" in t
+        i = t.find("유캐스트")
+        out["ctx"] = re.sub(r"\s+", " ", t[max(0, i - 500):i + 500]) if i >= 0 else ""
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
