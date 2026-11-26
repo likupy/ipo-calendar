@@ -294,7 +294,7 @@ def doc_text_any(m):
     raise RuntimeError("본문 없음")
 
 
-ELIG_VER = 4   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
+ELIG_VER = 5   # 계좌개설·수수료 읽는 규칙을 고칠 때 올린다
 
 ELIG_HDR = re.compile(r"[【\[]\s*([^【】\[\]]{0,30}?)\s*(?:청약|참가)\s*자격\s*[】\]]")
 # 계좌개설 마감 (비대면 기준). 위에서부터 먼저 맞는 것을 쓴다.
@@ -471,6 +471,7 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
                 if "첨부추가" not in x.get("report_nm", "") and x["rcept_no"][:8] <= it["sub"][0].replace("-", "")]
         reps.sort(key=lambda x: x["rcept_no"], reverse=True)
         failed = False
+        old_ac = it.pop("acct", None)   # 읽는 규칙이 바뀌었으니 계좌개설 문구는 새로 읽는다(못 읽으면 이전 값으로 되돌린다)
         for tried, x in enumerate(reps[:6], 1):
             try:
                 q, ac, fe = read_doc_info(fetch_doc_text(x["rcept_no"]), it["brokers"])
@@ -487,6 +488,8 @@ def backfill(merged, today_s, limit_m=15, limit_q=14):
                         it[k].setdefault(b, val)   # 더 최근 공시 값을 우선
             if "minq" in it and (it.get("acct") or it.get("fee") or tried >= 2) or tried >= 3:
                 break
+        if not it.get("acct") and old_ac:
+            it["acct"] = old_ac
         if not failed or "minq" in it:
             it["minq_v"] = MINQ_VER
             it["elig_v"] = ELIG_VER
