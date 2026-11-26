@@ -638,6 +638,7 @@ def find_corp(name, sub0):
     bgn = sub0 - timedelta(days=75)
     k = norm(name)
     sp = is_spac(name)
+    fb = None
     for pg in range(1, 12):
         r = call("list.json", bgn_de=bgn.strftime("%Y%m%d"), end_de=end.strftime("%Y%m%d"), pblntf_ty="C", pblntf_detail_ty="C001", page_no=pg, page_count=100)
         for x in r.get("list", []) or []:
@@ -645,12 +646,16 @@ def find_corp(name, sub0):
             if sp:   # 스팩은 이름을 짧게 줄여 맞추면 안 된다(예: 'SK증권스팩14호' 가 증권사 'SK증권' 으로 잘못 연결됨)
                 if is_spac(g) and norm2(g) == norm2(k):
                     return x["corp_code"]
+                if is_spac(g):   # 38 은 '신영스팩12호', DART 는 '신영해피투모로우제12호기업인수목적': 이름 앞부분과 호수가 같을 때만 보조로 쓴다
+                    a_, b_ = re.fullmatch(r"(\D{2,})(\d+)", norm2(k)), re.fullmatch(r"(\D{2,})(\d+)", norm2(g))
+                    if a_ and b_ and a_.group(2) == b_.group(2) and b_.group(1).startswith(a_.group(1)):
+                        fb = fb or x["corp_code"]
                 continue
             if g == k or (len(g) >= 3 and (k.startswith(g) or g.startswith(k))):
                 return x["corp_code"]
         if r.get("status") != "000" or pg >= int(r.get("total_page", 1) or 1):
             break
-    return None
+    return fb
 
 
 def dart_reports(corp, sub0):
