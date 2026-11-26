@@ -513,6 +513,21 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     return '';
   }
 
+  /* 계좌개설 'N영업일 전' 의 실제 날짜. 한국거래소 휴장일(2026년 전체 + 2027-01-01)을 확인해 둔 기간(~2027-01-31)만 계산한다. */
+  const KRX_OFF = ['2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02', '2026-05-01', '2026-05-05', '2026-05-25', '2026-06-03', '2026-07-17', '2026-08-17', '2026-09-24', '2026-09-25', '2026-10-05', '2026-10-09', '2026-12-25', '2026-12-31', '2027-01-01'];
+  function acctDate(p, txt) {
+    const m = /^(\d+)영업일 전$/.exec(txt || '');
+    if (!m || !p.sub || !p.sub[0] || p.sub[0] < '2026-01-02' || p.sub[0] > '2027-01-31') return '';
+    let t = Date.parse(p.sub[0] + 'T00:00:00Z'), n = +m[1];
+    while (n > 0) {
+      t -= DAY;
+      const dt = new Date(t), dow = dt.getUTCDay(), iso = dt.toISOString().slice(0, 10);
+      if (dow !== 0 && dow !== 6 && KRX_OFF.indexOf(iso) < 0) n--;
+    }
+    const d = new Date(t);
+    return ' (' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + ')';
+  }
+
   /* ---- calendar ---- */
   const catOf = ev => ev.kind === 'listing' ? 'lst' : ev.kind === 'refund' ? 'ref' : (ev.p.spac ? 'spc' : 'sub');
   
@@ -807,7 +822,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
         const tot = Object.values(p.ext.alloc).reduce((a, c) => a + c, 0);
         r += '<dt>배정 수량</dt><dd>' + fmt(p.ext.alloc[b]) + '주' + (Object.keys(p.ext.alloc).length > 1 ? '<span class="sh">' + Math.round(p.ext.alloc[b] / tot * 100) + '%</span>' : '') + '</dd>';
       }
-      if (p.acct && p.acct[b]) r += '<dt>계좌개설</dt><dd>청약 ' + esc(p.acct[b]) + '</dd>';
+      if (p.acct && p.acct[b]) r += '<dt>계좌개설</dt><dd>청약 ' + esc(p.acct[b]) + acctDate(p, p.acct[b]) + '</dd>';
       if (p.fee && p.fee[b]) r += '<dt>청약수수료</dt><dd>' + fmt(p.fee[b]) + '원</dd>';
       if (r) { covered++; cards += '<div class="bk"><div class="bn">' + esc(BN[b] || (b + '증권')) + '</div><dl>' + r + '</dl></div>'; }
     });
