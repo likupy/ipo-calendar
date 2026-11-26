@@ -1224,27 +1224,11 @@ def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
     try:
-        h = get("https://stock.naver.com/ipo", ua=NV_UA)
-        out["list_codes"] = sorted(set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)))
-        for it in doc["ipos"]:
-            if it["name"] in ("엠비디", "유캐스트"):
-                corp = (it.get("ext") or {}).get("corp")
-                sc = ""
-                try:
-                    sc = (call("company.json", corp_code=corp).get("stock_code") or "").strip() if corp else ""
-                except Exception as ex:
-                    sc = "ERR " + str(ex)[:60]
-                o = {"corp": corp, "sc": sc}
-                if len(sc) == 6:
-                    try:
-                        t = get("https://stock.naver.com/ipo/A" + sc, ua=NV_UA)
-                        o["len"] = len(t)
-                        i = t.find("청약결과")
-                        o["청약결과"] = re.sub(r"\s+", " ", t[i:i + 3000]) if i >= 0 else "없음"
-                        o["title"] = (re.search(r"<title>([^<]*)", t) or [0, ""])[1]
-                    except Exception as ex:
-                        o["err"] = str(ex)[:100]
-                out[it["name"]] = o
+        t = get("https://stock.naver.com/ipo/A0111R0", ua=NV_UA)
+        out["title"] = (re.search(r"<title>([^<]*)", t) or [0, ""])[1]
+        i = t.find("청약결과")
+        out["결과"] = re.sub(r"\s+", " ", t[i:i + 3500]) if i >= 0 else "없음"
+        out["names"] = re.findall(r'IpoDetailSchedule_name[^>]*>\s*([^<]+?)\s*</span>', t)
     except Exception as ex:
         out["err"] = str(ex)[:200]
     doc["probe"] = out
