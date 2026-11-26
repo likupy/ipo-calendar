@@ -1327,15 +1327,16 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    for k, rc in (("신고서", "20261123000371"), ("설명서", "20261123000373")):
+    for nm, rc in (("하나에어로", "20261109000166"), ("브릴스", "20260916000240"), ("아이엠스팩1호", "20261022000376"), ("우리투자스팩1호", "20261117000002")):
         try:
             t = fetch_doc_text(rc)
-            o = {"len": len(t)}
-            o["1562500"] = [t[max(0, m.start() - 500):m.start() + 500] for m in re.finditer(r"1,562,500", t)][:3]
-            o["일반청약자"] = [t[max(0, m.start() - 200):m.start() + 400] for m in re.finditer(r"일반청약자", t)][:4]
-            out[k] = o
+            secs = broker_sections(t)
+            o = {}
+            for bk, sec in secs.items():
+                o[bk] = [re.sub(r"\s+", " ", sec[max(0, m.start() - 160):m.start() + 200]) for m in re.finditer(r"전일|직전", sec)][:3]
+            out[nm] = o
         except Exception as ex:
-            out[k] = str(ex)[:200]
+            out[nm] = str(ex)[:150]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
