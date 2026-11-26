@@ -3799,100 +3799,95 @@
   }
  ],
  "probe": {
-  "mob": {
-   "len": 127134,
-   "title": "",
-   "uc": true,
-   "균등": [
-    ".css-nye6nd tbody tr:last-of-type td{padding-bottom:0;}</style><table class=\"css-nye6nd e1gih4zp0\"><colgroup><col width=\"\"/><col width=\"88px\"/><col width=\"88px\"/></colgroup><thead><tr><td>증권사</td><td>균등배정수</td><td>비례배정경쟁률</td></tr></thead><tbody><tr><td>유진투자증권</td><td>32.01</td><td>0.4 : 1</td></tr><tr><td>신영증권</td><td>30.03</td><td>4.2 : 1</td></tr></tbody></table></div></div></div><div class=\"css-0 e1gb4ma26\"><div class=\"css-14okbpw e1gb4ma25\"><span>상장일</span><span>12.03</span></div><div class",
-    "ubscription_title_fetchedAt\">11.26 12:35<!-- --> 기준</div></div><table class=\"css-nye6nd e1gih4zp0\"><colgroup><col width=\"\"/><col width=\"88px\"/><col width=\"88px\"/></colgroup><thead><tr><td>증권사</td><td>균등배정수</td><td>비례배정경쟁률</td></tr></thead><tbody><tr><td>신영증권</td><td>19.08</td><td>506.5 : 1</td></tr></tbody></table></div></div></div></div></div></div></div><style data-emotion=\"css ic9eih\">.css-ic9eih{margin-top:32px;width:100%;height:44px;display:-webkit-box;display:-webkit-flex;display:-ms-flexb"
+  "n": 2,
+  "rows": [
+   [
+    "ody td:last-of-type{padding-right:0;}.css-nye6nd thead{color:#9D9FA0;font-size:12px;font-weight:600;border-top:1px solid #E0E2E4;}.css-nye6nd thead td{padding-top:14px;}.css-nye6nd tbody{color:#585B5E;font-size:14px;font-weight:400;}.css-nye6nd tbody td{vertical-align:top;}.css-nye6nd tbody tr:last-of-type td{padding-bottom:0;} ",
+    [
+     [
+      "증권사",
+      "균등배정수",
+      "비례배정경쟁률"
+     ],
+     [
+      "유진투자증권",
+      "32.01",
+      "0.4 : 1"
+     ],
+     [
+      "신영증권",
+      "30.03",
+      "4.2 : 1"
+     ]
+    ]
    ],
-   "scripts": [
-    "/ustock-web/_next/static/chunks/polyfills-42372ed130431b0a.js",
-    "/ustock-web/_next/static/chunks/webpack-001dd00e01f91eff.js",
-    "/ustock-web/_next/static/chunks/framework-0bc93a2aaab6f1c5.js",
-    "/ustock-web/_next/static/chunks/main-dc2cefd4c1938238.js",
-    "/ustock-web/_next/static/chunks/pages/_app-8bbf954eb0944614.js",
-    "/ustock-web/_next/static/chunks/4fe31eba-b964a9c0c201e5f4.js",
-    "/ustock-web/_next/static/chunks/1498-80f223cd8b00a251.js",
-    "/ustock-web/_next/static/chunks/3667-de79071eab88a998.js",
-    "/ustock-web/_next/static/chunks/8136-5171e648da74bed6.js",
-    "/ustock-web/_next/static/chunks/9919-a2668d85949f44c6.js",
-    "/ustock-web/_next/static/chunks/5734-6aeafe88e2e51d8f.js",
-    "/ustock-web/_next/static/chunks/2406-9bbca3d68ebccb1a.js"
-   ],
-   "hrefs": [
-    "#ipo",
-    "/images/ipo_empty_view.png",
-    "/service/ipo",
-    "https://ustock.naver.com/service/ipo"
-   ],
-   "codes": [
-    "1000000",
-    "1100000",
-    "1180000",
-    "1200000",
-    "1300000",
-    "1400000",
-    "1537000",
-    "1562500",
-    "1600000",
-    "1639000",
-    "1652994",
-    "1700000",
-    "1710000",
-    "1866000",
-    "2000000",
-    "2044861",
-    "2100000",
-    "2120000",
-    "2200000",
-    "2300000"
-   ],
-   "head": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">공모주 IPO 캘린더, 공모주 일정 | Npay 비상장</title><meta name=\"description\" content=\"Npay 비상장 공모주 IPO 캘린더에서는 공모주 진행 현황과 다가오는 청약 예정 종목에 대한 정보를 제공합니다.\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https://ustock.naver.com/service/ipo\" data-next-head=\"\"/><meta name=\"keywords\" content=\"Npay 비상장, 비상장, 비상장주식거래, 비상장주식거래사이트,장외주식, 장외시장, 주식, 증권, 비상장종목, IPO, IPO일정, IPO캘린더, 공모청약, 공모주 상장, 공모주 일정, 공모주 상장일정, 공모주 캘린더, 공모주 배정 계산기, 코스닥상장, 신규상장, 신규상장예정"
-  },
-  "pc": {
-   "len": 161384,
-   "title": "",
-   "uc": false,
-   "균등": [],
-   "scripts": [
-    "/ustock-web/_next/static/chunks/polyfills-42372ed130431b0a.js",
-    "/ustock-web/_next/static/chunks/webpack-001dd00e01f91eff.js",
-    "/ustock-web/_next/static/chunks/framework-0bc93a2aaab6f1c5.js",
-    "/ustock-web/_next/static/chunks/main-dc2cefd4c1938238.js",
-    "/ustock-web/_next/static/chunks/pages/_app-8bbf954eb0944614.js",
-    "/ustock-web/_next/static/chunks/4fe31eba-b964a9c0c201e5f4.js",
-    "/ustock-web/_next/static/chunks/1498-80f223cd8b00a251.js",
-    "/ustock-web/_next/static/chunks/3667-de79071eab88a998.js",
-    "/ustock-web/_next/static/chunks/8136-5171e648da74bed6.js",
-    "/ustock-web/_next/static/chunks/9919-a2668d85949f44c6.js",
-    "/ustock-web/_next/static/chunks/5734-6aeafe88e2e51d8f.js",
-    "/ustock-web/_next/static/chunks/2406-9bbca3d68ebccb1a.js"
-   ],
-   "hrefs": [
-    "/images/ipo_empty_view.png",
-    "/service/ipo",
-    "https://ustock.naver.com/service/ipo"
-   ],
-   "codes": [
-    "2392554",
-    "267H318",
-    "A245060",
-    "A285240",
-    "A323530",
-    "A341650",
-    "A350920",
-    "A370190",
-    "A389930",
-    "A408480",
-    "A419350",
-    "A458860",
-    "DOCTYPE",
-    "MUSINSA",
-    "UNIFIED"
-   ],
-   "head": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">공모주 IPO 캘린더, 공모주 일정 | Npay 비상장</title><meta name=\"description\" content=\"Npay 비상장 공모주 IPO 캘린더에서는 공모주 진행 현황과 다가오는 청약 예정 종목에 대한 정보를 제공합니다.\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https://ustock.naver.com/service/ipo\" data-next-head=\"\"/><meta name=\"keywords\" content=\"Npay 비상장, 비상장, 비상장주식거래, 비상장주식거래사이트,장외주식, 장외시장, 주식, 증권, 비상장종목, IPO, IPO일정, IPO캘린더, 공모청약, 공모주 상장, 공모주 일정, 공모주 상장일정, 공모주 캘린더, 공모주 배정 계산기, 코스닥상장, 신규상장, 신규상장예정"
-  }
+   [
+    "1.489c0 .11.09.2.2.2h2.749a.2.2 0 0 0 .2-.2v-1.49a.2.2 0 0 0-.2-.2zm4.208.2c0-.11.09-.2.2-.2h2.749c.11 0 .2.09.2.2v1.489a.2.2 0 0 1-.2.2h-2.749a.2.2 0 0 1-.2-.2zm4.607-.2a.2.2 0 0 0-.2.2v1.489c0 .11.09.2.2.2h2.749a.2.2 0 0 0 .2-.2v-1.49a.2.2 0 0 0-.2-.2z\" clip-rule=\"evenodd\"> 신영해피투모로우제12호기업인수목적 공모가 2,000 원 청약 경쟁률 11.26 12:35 기준 ",
+    [
+     [
+      "증권사",
+      "균등배정수",
+      "비례배정경쟁률"
+     ],
+     [
+      "신영증권",
+      "19.08",
+      "506.5 : 1"
+     ]
+    ]
+   ]
+  ],
+  "names": [
+   "회사소개",
+   "채용",
+   "에이엔에이치스트럭쳐",
+   "엔키화이트햇",
+   "우리투자제1호기업인수목적",
+   "상장일",
+   "유캐스트",
+   "상장일",
+   "더보기",
+   "링크플로우",
+   "인스페이스",
+   "구다이글로벌",
+   "클러쉬",
+   "인텔릭스",
+   "패스트파이브",
+   "그레이스",
+   "오렌지스퀘어",
+   "슈퍼브에이아이",
+   "비엔케이제4호기업인수목적",
+   "이티에스",
+   "아테코",
+   "크리오스",
+   "에버스핀",
+   "티카로스",
+   "세미솔루션",
+   "베르티스",
+   "뱅크샐러드",
+   "키노톤",
+   "티에스모스트",
+   "셀렉트스타",
+   "에이스엔지니어링",
+   "서북",
+   "엠아이티",
+   "큐로드",
+   "노바셀테크놀로지",
+   "엑티브온",
+   "무신사",
+   "어피닛",
+   "라이드플럭스",
+   "유림테크",
+   "에버온",
+   "동승",
+   "에프엠더블유",
+   "소노인터내셔널",
+   "바이다",
+   "씨엔티테크",
+   "삼홍아크튜리온",
+   "넥스트에어로스페이스",
+   "비앤비코리아",
+   "오토핸즈"
+  ]
  }
 }
