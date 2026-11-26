@@ -922,6 +922,16 @@ def naver_listings(need, pxn=()):
     try:
         h = get("https://stock.naver.com/ipo", ua=NV_UA)
         codes = set(re.findall(r"/ipo/([A-Z0-9]{7})\b", h)) | set(re.findall(r'"(?:itemCode|stockCode|code)"\s*:\s*"([A-Z0-9]{7})"', h))
+        for pt in ("listing-upcoming", "subscribing", "subscribing-upcoming"):   # 첫 화면에 안 나오는 상장대기·청약 종목은 네이버 앱이 쓰는 목록 주소로 찾는다
+            for pg in (1, 2, 3):
+                try:
+                    lst = (json.loads(get(f"https://m.stock.naver.com/front-api/ipo/progress?progressType={pt}&page={pg}", ua=NV_UA)).get("result") or {}).get("ipoList") or []
+                except Exception as e:
+                    log("  네이버 진행 목록 실패", pt, pg, e)
+                    break
+                codes |= {x["ipoCode"] for x in lst if re.fullmatch(r"[A-Z0-9]{7}", x.get("ipoCode") or "")}
+                if len(lst) < 10:
+                    break
         log(f"네이버 공모주 코드 {len(codes)}개")
         for c in sorted(codes):
             try:
