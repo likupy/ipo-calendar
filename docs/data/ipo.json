@@ -3792,29 +3792,8 @@
   }
  ],
  "probe": {
-  "list_codes": [
-   "A0111R0",
-   "A0147B0",
-   "A0153R0",
-   "A0162D0",
-   "A271160",
-   "A345290",
-   "A471800",
-   "A493260",
-   "A493410",
-   "A495910",
-   "A498150"
-  ],
-  "엠비디": {
-   "corp": "01705740",
-   "sc": "498150",
-   "len": 67864,
-   "청약결과": "청약결과</span><span class=\"IpoDetailSchedule_date___hf2O\">통합 경쟁률 172.42 : 1</span></div><div class=\"IpoDetailSchedule_detail__HcjyZ\"><div class=\"IpoDetailSchedule_box___mLL3\"><div class=\"IpoDetailSchedule_area-bi__nFH4A\"><span class=\"IpoDetailSchedule_name__07of_\">하나증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">344.83 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">37,635 건</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 종합 청약 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">172.42 : 1</dd></div></dl></div></div></li><li class=\"IpoDetailSchedule_item__FB4y7 IpoDetailSchedule_type-complete__kirHD\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_icon__ILS5J\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"25\" cy=\"25\" r=\"25\" fill=\"#404048\"></circle><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38.4717 16.3185 38.6356 16.7095 38.6356 17.1175C38.6356 17.5256 38.4717 17.9166 38.1806 18.2026L21.5832 34.6169C21.2907 34.906 20.8958 35.0677 20.4845 35.0669C20.0735 35.0663 19.6787 34.9053 19.3858 34.6169Z\" fill=\"white\"></path></svg></span><span class=\"IpoDetailSchedule_text___Fvnv\">배정공고</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 11. 17.</span></div></li><li class=\"IpoDetailSchedule_item__FB4y7 IpoDetailSchedule_type-complete__kirHD\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_icon__ILS5J\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"25\" cy=\"25\" r=\"25\" fill=\"#404048\"></circle><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38.4717 16.3185 38.6356 16.7095 38.6356 17.1175C38.6356 17.5256 38.4717 17.9166 38.1806 18.2026L21.5832 34.6169C21.2907 34.906 20.8958 35.0677 20.4845 35.0669C20.0735 35.0663 19.6787 34.9053 19.3858 34.6169Z\" fill=\"white\"></path></svg></span><span class=\"IpoDetailSchedule_text___Fvnv\">납입</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 11. 17.</span></div></li><li class=\"IpoDetailSchedule_item__FB4y7 IpoDetailSchedule_type-complete__kirHD\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSched",
-   "title": "엠비디 - Npay 증권"
-  },
-  "유캐스트": {
-   "corp": "01705573",
-   "sc": ""
-  }
+  "title": "에이엔에이치스트럭쳐 - Npay 증권",
+  "결과": "없음",
+  "names": []
  }
 }
