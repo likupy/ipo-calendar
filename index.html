@@ -736,7 +736,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       if (f && (f.n_fin || f.n) && f.req != null && f.eq_p != null && p.brokers.length === 1) { const x = one(p.brokers[0], f.n_fin || f.n, f.req, f.eq_p, f.gen || (e.alloc || {})[p.brokers[0]]); if (x) rowsFin.push(x); }
       else if (e.fin_b && p.brokers.length > 1 && p.brokers.every(b => e.fin_b[b] && e.fin_b[b].n)) { const xs = p.brokers.map(b => { const q = e.fin_b[b]; const A = (e.alloc || {})[b] || (q.req > q.eq + q.pr ? q.eq + q.pr : null); return one(b, q.n, q.req, q.eq_p, A); }); if (xs.every(Boolean)) xs.forEach(x => rowsFin.push(x)); }
     }
-    if (rowsFin.length && p.nvr) rowsFin.forEach(r => { if (p.nvr[r[0]] > 0) r[2] = p.nvr[r[0]]; });
+    if (rowsFin.length && p.nvr) rowsFin.forEach(r => { if (p.nvr[r[0]] > 0) r[2] = Math.max(1, p.nvr[r[0]]); });
     if (rowsFin.length) {
       h += '<table><tr><th></th><th>균등배정</th><th>비례배정 1주당</th></tr>' + rowsFin.map(r =>
         '<tr><td>' + esc(BN[r[0]] || (r[0] + '증권')) + '</td><td>' + f2(r[1]) + '주</td><td>' + (r[2] == null ? '-' : fmt(Math.round(+r[2].toFixed(2) * p.price * p.margin / 100)) + '원') + '</td></tr>').join('') + '</table>';

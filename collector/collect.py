@@ -911,7 +911,7 @@ def naver_final(t):
         b = short_broker(m.group(1))
         if r and b:
             v = float(r.group(1).replace(",", ""))
-            if v >= 1:
+            if v > 0:
                 out[b] = v
     return out
 
@@ -951,7 +951,7 @@ def naver_listings(need, pxn=()):
                 log("  네이버 상세 실패", c, e)
     except Exception as e:
         log("네이버 목록 실패(무시):", e)
-    log("네이버 상장일 보조:", out, "주가:", px)
+    log("네이버 상장일 보조:", out, "주가:", px, "최종 비례:", fin)
     return out, px, fin
 
 
