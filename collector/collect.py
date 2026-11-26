@@ -1001,6 +1001,37 @@ def naver_listings(need, pxn=()):
     return out, px, fin
 
 
+def fetch_holidays(old):
+    """공공데이터포털 한국천문연구원 특일 정보(공휴일·대체공휴일·임시공휴일). 올해와 내년 전체. 실패하면 이전 값을 그대로 쓴다."""
+    key = os.environ.get("HOLIDAY_API_KEY")
+    if not key:
+        return old
+    y0 = datetime.now(KST).year
+    dates = {}
+    try:
+        for y in (y0, y0 + 1):
+            for mth in range(1, 13):
+                u = "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?" + urllib.parse.urlencode({"serviceKey": key, "solYear": y, "solMonth": f"{mth:02d}", "_type": "json", "numOfRows": 50})
+                r = json.loads(get(u, timeout=30))
+                body = (r.get("response") or {}).get("body") or {}
+                if (r.get("response") or {}).get("header", {}).get("resultCode") not in ("00", None):
+                    raise RuntimeError("특일 API 오류 " + str((r.get("response") or {}).get("header")))
+                items = (body.get("items") or {})
+                items = items.get("item") if isinstance(items, dict) else None
+                if isinstance(items, dict):
+                    items = [items]
+                for x in items or []:
+                    if x.get("isHoliday") == "Y":
+                        d = str(x["locdate"])
+                        dates[f"{d[:4]}-{d[4:6]}-{d[6:]}"] = x.get("dateName", "")
+    except Exception as ex:
+        log("특일 정보 읽기 실패(이전 값 유지):", ex)
+        return old
+    # 내년 1월 1일이 있으면 내년 월력요항이 확정돼 있다고 보고 내년 말까지, 없으면 올해 말까지만 믿는다
+    through = f"{y0 + 1}-12-31" if f"{y0 + 1}-01-01" in dates else f"{y0}-12-31"
+    return {"dates": dict(sorted(dates.items())), "through": through}
+
+
 def derive_alloc(merged):
     for it_ in merged.values():   # 공시(정정 후 표)에서 확정 배정을 읽은 단일 증권사 종목은 그 숫자를 배정 수량으로 쓴다
         e_ = it_.get("ext") or {}
@@ -1273,11 +1304,14 @@ def main():
 
     cutoff = (datetime.now(KST) - timedelta(days=KEEP_DAYS)).date().isoformat()
     ipos = sorted([p for p in merged.values() if p["sub"][0] >= cutoff], key=lambda p: p["sub"][0])
-    if before == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False) and old_doc.get("v") == SCHEMA and not changes:
+    hol = fetch_holidays(old_doc.get("holidays"))
+    if before == json.dumps({p["id"]: p for p in ipos}, sort_keys=True, ensure_ascii=False) and old_doc.get("v") == SCHEMA and not changes and hol == old_doc.get("holidays"):
         log("변경 없음 - 파일을 건드리지 않습니다.")
         return
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     doc = {"v": SCHEMA, "updatedAt": datetime.now(KST).strftime("%Y-%m-%dT%H:%M"), "source": "38커뮤니케이션+OpenDART", "ipos": ipos, "changes": allc}
+    if hol:
+        doc["holidays"] = hol
     tmp = OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)

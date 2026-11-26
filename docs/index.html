@@ -529,12 +529,14 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
   const KRX_OFF = ['2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02', '2026-05-01', '2026-05-05', '2026-05-25', '2026-06-03', '2026-07-17', '2026-08-17', '2026-09-24', '2026-09-25', '2026-10-05', '2026-10-09', '2026-12-25', '2026-12-31', '2027-01-01'];
   function acctDate(p, txt) {
     const m = /^(\d+)영업일 전$/.exec(txt || '') || (txt === '전일' ? [0, 1] : null);
-    if (!m || !p.sub || !p.sub[0] || p.sub[0] < '2026-01-02' || p.sub[0] > '2027-01-31') return '';
+    const hol = DATA.hol && DATA.hol.dates ? DATA.hol : null, lim = hol && hol.through > '2027-01-31' ? hol.through : '2027-01-31';
+    if (!m || !p.sub || !p.sub[0] || p.sub[0] < '2026-01-02' || p.sub[0] > lim) return '';
     let t = Date.parse(p.sub[0] + 'T00:00:00Z'), n = +m[1];
     while (n > 0) {
       t -= DAY;
       const dt = new Date(t), dow = dt.getUTCDay(), iso = dt.toISOString().slice(0, 10);
-      if (dow !== 0 && dow !== 6 && KRX_OFF.indexOf(iso) < 0) n--;
+      const off = KRX_OFF.indexOf(iso) >= 0 || (hol && hol.dates[iso]) || /-12-31$|-05-01$/.test(iso);   // 12/31·5/1 은 공휴일이 아니어도 거래소가 쉰다
+      if (dow !== 0 && dow !== 6 && !off) n--;
     }
     const d = new Date(t);
     return ' (' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + ')';
@@ -1083,7 +1085,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(j => {
         if (!j || !Array.isArray(j.ipos) || !j.ipos.length || !j.updatedAt) return;
-        DATA = { updatedAt: j.updatedAt, ipos: j.ipos, live: true, changes: Array.isArray(j.changes) ? j.changes : [] };
+        DATA = { updatedAt: j.updatedAt, ipos: j.ipos, live: true, changes: Array.isArray(j.changes) ? j.changes : [], hol: j.holidays || null };
         updateBell();
         rebuild();
         const h = homeMonth();
