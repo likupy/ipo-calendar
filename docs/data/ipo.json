@@ -3799,222 +3799,100 @@
   }
  ],
  "probe": {
-  "신영스팩12호": {
-   "info": [
-    [
-     "종목코드",
-     "A0231Y0"
-    ],
-    [
-     "시장구분",
-     "코스닥"
-    ],
-    [
-     "업종",
-     "금융 지원 서비스업"
-    ],
-    [
-     "주요제품",
-     "기업인수합병"
-    ],
-    [
-     "희망공모가",
-     "2,000원"
-    ],
-    [
-     "확정공모가",
-     "2,000원"
-    ],
-    [
-     "공모금액",
-     "125억원"
-    ],
-    [
-     "공모주식수",
-     "625만주"
-    ],
-    [
-     "기관경쟁률",
-     "1,275.8 : 1"
-    ],
-    [
-     "일반청약주식수",
-     "1,562,500 ~ 1,875,000주"
-    ],
-    [
-     "청약증권사",
-     "신영증권"
-    ]
+  "mob": {
+   "len": 127134,
+   "title": "",
+   "uc": true,
+   "균등": [
+    ".css-nye6nd tbody tr:last-of-type td{padding-bottom:0;}</style><table class=\"css-nye6nd e1gih4zp0\"><colgroup><col width=\"\"/><col width=\"88px\"/><col width=\"88px\"/></colgroup><thead><tr><td>증권사</td><td>균등배정수</td><td>비례배정경쟁률</td></tr></thead><tbody><tr><td>유진투자증권</td><td>32.01</td><td>0.4 : 1</td></tr><tr><td>신영증권</td><td>30.03</td><td>4.2 : 1</td></tr></tbody></table></div></div></div><div class=\"css-0 e1gb4ma26\"><div class=\"css-14okbpw e1gb4ma25\"><span>상장일</span><span>12.03</span></div><div class",
+    "ubscription_title_fetchedAt\">11.26 12:35<!-- --> 기준</div></div><table class=\"css-nye6nd e1gih4zp0\"><colgroup><col width=\"\"/><col width=\"88px\"/><col width=\"88px\"/></colgroup><thead><tr><td>증권사</td><td>균등배정수</td><td>비례배정경쟁률</td></tr></thead><tbody><tr><td>신영증권</td><td>19.08</td><td>506.5 : 1</td></tr></tbody></table></div></div></div></div></div></div></div><style data-emotion=\"css ic9eih\">.css-ic9eih{margin-top:32px;width:100%;height:44px;display:-webkit-box;display:-webkit-flex;display:-ms-flexb"
    ],
-   "res": [
-    "    최종 비례배정 경쟁률  506.49 : 1    최종 청약 신청건수  40,962 건    최종 종합 청약 경쟁률  253.25 : 1         배정공고  2026. 11. 27.      납입  2026. 11. 27.      환불  2026. 11. 27.      상장 <span class=\"IpoDetailSchedule_date"
+   "scripts": [
+    "/ustock-web/_next/static/chunks/polyfills-42372ed130431b0a.js",
+    "/ustock-web/_next/static/chunks/webpack-001dd00e01f91eff.js",
+    "/ustock-web/_next/static/chunks/framework-0bc93a2aaab6f1c5.js",
+    "/ustock-web/_next/static/chunks/main-dc2cefd4c1938238.js",
+    "/ustock-web/_next/static/chunks/pages/_app-8bbf954eb0944614.js",
+    "/ustock-web/_next/static/chunks/4fe31eba-b964a9c0c201e5f4.js",
+    "/ustock-web/_next/static/chunks/1498-80f223cd8b00a251.js",
+    "/ustock-web/_next/static/chunks/3667-de79071eab88a998.js",
+    "/ustock-web/_next/static/chunks/8136-5171e648da74bed6.js",
+    "/ustock-web/_next/static/chunks/9919-a2668d85949f44c6.js",
+    "/ustock-web/_next/static/chunks/5734-6aeafe88e2e51d8f.js",
+    "/ustock-web/_next/static/chunks/2406-9bbca3d68ebccb1a.js"
    ],
-   "tot": [
-    "통합 경쟁률 253.24 : 1"
-   ]
+   "hrefs": [
+    "#ipo",
+    "/images/ipo_empty_view.png",
+    "/service/ipo",
+    "https://ustock.naver.com/service/ipo"
+   ],
+   "codes": [
+    "1000000",
+    "1100000",
+    "1180000",
+    "1200000",
+    "1300000",
+    "1400000",
+    "1537000",
+    "1562500",
+    "1600000",
+    "1639000",
+    "1652994",
+    "1700000",
+    "1710000",
+    "1866000",
+    "2000000",
+    "2044861",
+    "2100000",
+    "2120000",
+    "2200000",
+    "2300000"
+   ],
+   "head": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">공모주 IPO 캘린더, 공모주 일정 | Npay 비상장</title><meta name=\"description\" content=\"Npay 비상장 공모주 IPO 캘린더에서는 공모주 진행 현황과 다가오는 청약 예정 종목에 대한 정보를 제공합니다.\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https://ustock.naver.com/service/ipo\" data-next-head=\"\"/><meta name=\"keywords\" content=\"Npay 비상장, 비상장, 비상장주식거래, 비상장주식거래사이트,장외주식, 장외시장, 주식, 증권, 비상장종목, IPO, IPO일정, IPO캘린더, 공모청약, 공모주 상장, 공모주 일정, 공모주 상장일정, 공모주 캘린더, 공모주 배정 계산기, 코스닥상장, 신규상장, 신규상장예정"
   },
-  "유캐스트": {
-   "info": [
-    [
-     "종목코드",
-     "A0175C0"
-    ],
-    [
-     "시장구분",
-     "코스닥"
-    ],
-    [
-     "업종",
-     "통신 및 방송 장비 제조업"
-    ],
-    [
-     "주요제품",
-     "LTE 및 5G 통신장비"
-    ],
-    [
-     "희망공모가",
-     "19,000 ~ 23,000원"
-    ],
-    [
-     "확정공모가",
-     "19,000원"
-    ],
-    [
-     "공모금액",
-     "152억원"
-    ],
-    [
-     "공모주식수",
-     "80만주"
-    ],
-    [
-     "기관경쟁률",
-     "173.42 : 1"
-    ],
-    [
-     "일반청약주식수",
-     "20만 ~ 24만주"
-    ],
-    [
-     "청약증권사",
-     "유진투자증권, 신영증권"
-    ]
+  "pc": {
+   "len": 161384,
+   "title": "",
+   "uc": false,
+   "균등": [],
+   "scripts": [
+    "/ustock-web/_next/static/chunks/polyfills-42372ed130431b0a.js",
+    "/ustock-web/_next/static/chunks/webpack-001dd00e01f91eff.js",
+    "/ustock-web/_next/static/chunks/framework-0bc93a2aaab6f1c5.js",
+    "/ustock-web/_next/static/chunks/main-dc2cefd4c1938238.js",
+    "/ustock-web/_next/static/chunks/pages/_app-8bbf954eb0944614.js",
+    "/ustock-web/_next/static/chunks/4fe31eba-b964a9c0c201e5f4.js",
+    "/ustock-web/_next/static/chunks/1498-80f223cd8b00a251.js",
+    "/ustock-web/_next/static/chunks/3667-de79071eab88a998.js",
+    "/ustock-web/_next/static/chunks/8136-5171e648da74bed6.js",
+    "/ustock-web/_next/static/chunks/9919-a2668d85949f44c6.js",
+    "/ustock-web/_next/static/chunks/5734-6aeafe88e2e51d8f.js",
+    "/ustock-web/_next/static/chunks/2406-9bbca3d68ebccb1a.js"
    ],
-   "res": [
-    "    최종 비례배정 경쟁률  0.18 : 1    최종 청약 신청건수  2,500 건    최종 종합 청약 경쟁률  0.09 : 1       신영증권     최종 비례배정 경쟁률  4.19 : 1    최종 청약 신청건수  660 건    최종 종합 청약 경쟁률  2.1 : 1       <div class=\"IpoDetailSchedul",
-    "    최종 비례배정 경쟁률  4.19 : 1    최종 청약 신청건수  660 건    최종 종합 청약 경쟁률  2.1 : 1            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38.4717 16."
+   "hrefs": [
+    "/images/ipo_empty_view.png",
+    "/service/ipo",
+    "https://ustock.naver.com/service/ipo"
    ],
-   "tot": [
-    "통합 경쟁률 0.49 : 1"
-   ]
-  },
-  "엠비디": {
-   "info": [
-    [
-     "종목코드",
-     "A498150"
-    ],
-    [
-     "시장구분",
-     "코스닥"
-    ],
-    [
-     "업종",
-     "그외 기타 전문, 과학 및 기술 서비스업"
-    ],
-    [
-     "주요제품",
-     "3D 세포배양 플랫폼 및 서비스"
-    ],
-    [
-     "희망공모가",
-     "9,600 ~ 11,700원"
-    ],
-    [
-     "확정공모가",
-     "7,000원"
-    ],
-    [
-     "공모금액",
-     "140억원"
-    ],
-    [
-     "공모주식수",
-     "200만주"
-    ],
-    [
-     "기관경쟁률",
-     "187.1 : 1"
-    ],
-    [
-     "일반청약주식수",
-     "50만 ~ 60만주"
-    ],
-    [
-     "청약증권사",
-     "하나증권"
-    ]
+   "codes": [
+    "2392554",
+    "267H318",
+    "A245060",
+    "A285240",
+    "A323530",
+    "A341650",
+    "A350920",
+    "A370190",
+    "A389930",
+    "A408480",
+    "A419350",
+    "A458860",
+    "DOCTYPE",
+    "MUSINSA",
+    "UNIFIED"
    ],
-   "res": [
-    "    최종 비례배정 경쟁률  344.83 : 1    최종 청약 신청건수  37,635 건    최종 종합 청약 경쟁률  172.42 : 1            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38."
-   ],
-   "tot": [
-    "통합 경쟁률 172.42 : 1"
-   ]
-  },
-  "래블업": {
-   "info": [
-    [
-     "종목코드",
-     "A0147B0"
-    ],
-    [
-     "시장구분",
-     "코스닥"
-    ],
-    [
-     "업종",
-     "소프트웨어 개발 및 공급업"
-    ],
-    [
-     "주요제품",
-     "Backend.AI(AI 인프라 운영플랫폼)"
-    ],
-    [
-     "희망공모가",
-     "19,000 ~ 22,000원"
-    ],
-    [
-     "확정공모가",
-     "19,000원"
-    ],
-    [
-     "공모금액",
-     "414억원"
-    ],
-    [
-     "공모주식수",
-     "218만주"
-    ],
-    [
-     "기관경쟁률",
-     "284.53 : 1"
-    ],
-    [
-     "일반청약주식수",
-     "545,000 ~ 654,000주"
-    ],
-    [
-     "청약증권사",
-     "NH투자증권"
-    ]
-   ],
-   "res": [
-    "    최종 비례배정 경쟁률  7.1 : 1    최종 청약 신청건수  21,128 건    최종 종합 청약 경쟁률  3.55 : 1            <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38.4717 "
-   ],
-   "tot": [
-    "통합 경쟁률 3.55 : 1"
-   ]
+   "head": "<!DOCTYPE html><html lang=\"ko\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">공모주 IPO 캘린더, 공모주 일정 | Npay 비상장</title><meta name=\"description\" content=\"Npay 비상장 공모주 IPO 캘린더에서는 공모주 진행 현황과 다가오는 청약 예정 종목에 대한 정보를 제공합니다.\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https://ustock.naver.com/service/ipo\" data-next-head=\"\"/><meta name=\"keywords\" content=\"Npay 비상장, 비상장, 비상장주식거래, 비상장주식거래사이트,장외주식, 장외시장, 주식, 증권, 비상장종목, IPO, IPO일정, IPO캘린더, 공모청약, 공모주 상장, 공모주 일정, 공모주 상장일정, 공모주 캘린더, 공모주 배정 계산기, 코스닥상장, 신규상장, 신규상장예정"
   }
  }
 }
