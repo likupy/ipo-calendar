@@ -1237,20 +1237,23 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    for nm, ua in (("mob", NV_UA), ("pc", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36")):
-        u = "https://ustock.naver.com/service/ipo?schedule=toBeIPOList"
-        try:
-            t = get(u, ua=ua)
-            o = {"len": len(t), "title": (re.search(r"<title>([^<]*)", t) or [0, ""])[1]}
-            o["uc"] = "유캐스트" in t
-            o["균등"] = [re.sub(r"\s+", " ", t[max(0, m.start() - 200):m.start() + 300]) for m in re.finditer(r"균등", t)][:4]
-            o["scripts"] = re.findall(r'src="([^"]+\.js)"', t)[:12]
-            o["hrefs"] = sorted(set(re.findall(r'href="([^"]*ipo[^"]*)"', t)))[:20]
-            o["codes"] = sorted(set(re.findall(r"\b[A-Z0-9]{7}\b", t)))[:20]
-            o["head"] = re.sub(r"\s+", " ", t[:600])
-            out[nm] = o
-        except Exception as ex:
-            out[nm] = str(ex)[:200]
+    try:
+        t = get("https://ustock.naver.com/service/ipo?schedule=toBeIPOList", ua=NV_UA)
+        rows = []
+        for m in re.finditer(r"<table[^>]*>.*?</table>", t, re.S):
+            tb = m.group(0)
+            if "균등배정수" not in tb:
+                continue
+            body = re.findall(r"<tr>(.*?)</tr>", tb, re.S)
+            cells = [re.findall(r"<td[^>]*>(.*?)</td>", r, re.S) for r in body]
+            pre = re.sub(r"<[^>]+>", " ", t[max(0, m.start() - 2500):m.start()])
+            pre = re.sub(r"\s+", " ", pre)[-330:]
+            rows.append([pre, cells])
+        out["n"] = len(rows)
+        out["rows"] = rows
+        out["names"] = re.findall(r'<(?:strong|h\d|span)[^>]*>([가-힣A-Za-z0-9]{2,14}(?:스팩\d+호)?)</', t)[:60]
+    except Exception as ex:
+        out["err"] = str(ex)[:200]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
