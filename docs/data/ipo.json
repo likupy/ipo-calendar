@@ -1,6 +1,6 @@
 {
  "v": 3,
- "updatedAt": "2026-11-26T00:08",
+ "updatedAt": "2026-11-26T10:55",
  "source": "38커뮤니케이션+OpenDART",
  "ipos": [
   {
@@ -2773,6 +2773,10 @@
    "flags": [
     "DART 공시 못 찾음"
    ],
+   "nvr": {
+    "유진": 0.18,
+    "신영": 4.19
+   },
    "ext": {
     "dem_dates": [
      "2026-11-09",
@@ -2867,6 +2871,9 @@
    },
    "elig_v": 3,
    "flags": [],
+   "nvr": {
+    "신영": 506.49
+   },
    "ext": {
     "dem_dates": [
      "2026-11-19",
@@ -3790,34 +3797,5 @@
    "tab": "new",
    "text": "신규 등록 · 청약 12/17~12/18"
   }
- ],
- "probe": {
-  "extra": {
-   "A0175C0": [
-    "listing-upcoming",
-    "유캐스트"
-   ],
-   "A0231Y0": [
-    "listing-upcoming",
-    "신영스팩12호"
-   ]
-  },
-  "A0175C0": {
-   "len": 61998,
-   "title": "유캐스트 - Npay 증권",
-   "결과": "청약결과</span><span class=\"IpoDetailSchedule_date___hf2O\">통합 경쟁률 0.49 : 1</span></div><div class=\"IpoDetailSchedule_detail__HcjyZ\"><div class=\"IpoDetailSchedule_box___mLL3\"><div class=\"IpoDetailSchedule_area-bi__nFH4A\"><span class=\"IpoDetailSchedule_name__07of_\">유진투자증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">0.18 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">2,500 건</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 종합 청약 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">0.09 : 1</dd></div></dl></div><div class=\"IpoDetailSchedule_box___mLL3\"><div class=\"IpoDetailSchedule_area-bi__nFH4A\"><span class=\"IpoDetailSchedule_name__07of_\">신영증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">4.19 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">660 건</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 종합 청약 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">2.1 : 1</dd></div></dl></div></div></li><li class=\"IpoDetailSchedule_item__FB4y7 IpoDetailSchedule_type-complete__kirHD\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_icon__ILS5J\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 50 50\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"25\" cy=\"25\" r=\"25\" fill=\"#404048\"></circle><path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M19.3858 34.6169L11.8176 27.1305C11.5271 26.8442 11.3635 26.4534 11.3635 26.0455C11.3635 25.6376 11.5271 25.2467 11.8176 24.9604C12.4266 24.3606 13.4042 24.3606 14.0131 24.9604L20.4845 31.3578L35.9852 16.0325C36.5941 15.4327 37.5717 15.4327 38.1806 16.0325C38.4717 16.3185 38.6356 16.7095 38.6356 17.1175C38.6356 17.5256 38.4717 17.9166 38.1806 18.2026L21.5832 34.6169C21.2907 34.906 20.8958 35.0677 20.4845 35.0669C20.0735 35.0663 19.6787 34.9053 19.3858 34.6169Z\" fill=\"white\"></path></svg></span><span class=\"IpoDetailSchedule_text___Fvnv\">배정공고</span><span class=\"Ip",
-   "비례": [
-    "증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">0.18 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">2,500 건</dd></div><d",
-    "증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">4.19 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">660 건</dd></div><div"
-   ]
-  },
-  "A0231Y0": {
-   "len": 55379,
-   "title": "신영스팩12호 - Npay 증권",
-   "결과": "청약결과</span><span class=\"IpoDetailSchedule_date___hf2O\">통합 경쟁률 253.24 : 1</span></div><div class=\"IpoDetailSchedule_detail__HcjyZ\"><div class=\"IpoDetailSchedule_box___mLL3\"><div class=\"IpoDetailSchedule_area-bi__nFH4A\"><span class=\"IpoDetailSchedule_name__07of_\">신영증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">506.49 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">40,962 건</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 종합 청약 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">253.25 : 1</dd></div></dl></div></div></li><li class=\"IpoDetailSchedule_item__FB4y7\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_text___Fvnv\">배정공고</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 11. 27.</span></div></li><li class=\"IpoDetailSchedule_item__FB4y7\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_text___Fvnv\">납입</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 11. 27.</span></div></li><li class=\"IpoDetailSchedule_item__FB4y7\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_text___Fvnv\">환불</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 11. 27.</span></div></li><li class=\"IpoDetailSchedule_item__FB4y7\"><div class=\"IpoDetailSchedule_step__K5BRR\"><span class=\"IpoDetailSchedule_text___Fvnv\">상장</span><span class=\"IpoDetailSchedule_date___hf2O\">2026. 12. 03.</span></div></li></ol></div><div class=\"DividingLine_line__F02JJ\"></div><div class=\"IpoDetailInfo_area-title__Hzs3E\"><span class=\"IpoDetailInfo_logo__cOpmn\"><img src=\"https://financial.pstatic.net/pie/common-bi/2.6.1/images/IV_SHINYOUNG_Profile.png\" alt=\"IV_SHINYOUNG_Profile\" width=\"40\" height=\"40\" loading=\"eager\"/></span><h3 class=\"blind\">기업정보</h3><strong class=\"IpoDetailInfo_title__SvAI8\">신영스팩12호</strong></div><dl class=\"IpoDetailInfo_list__aR9HJ\"><div class=\"IpoDetailInfo_item__MP9N_\"><dt class=\"IpoDetailInfo_term__tyvms\">종목코드</dt><dd class=\"IpoDetailInfo_description__YIPAT\">A0231Y0</dd></div><div class=\"IpoDetailInfo_item__MP9N_\"><dt class=\"IpoDetailInfo_term__tyvms\">시장구분</dt><dd class=\"IpoDetailInfo_description__YIPAT\">코스닥</dd></div><div class=\"IpoDetailInfo_item__MP9N_\"><dt class=\"IpoDet",
-   "비례": [
-    "증권</span></div><dl class=\"IpoDetailSchedule_list-data__tFCFa\"><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 비례배정 경쟁률</dt><dd class=\"IpoDetailSchedule_description__0alFE\">506.49 : 1</dd></div><div class=\"IpoDetailSchedule_data___tTqR\"><dt class=\"IpoDetailSchedule_term__81gH5\">최종 청약 신청건수</dt><dd class=\"IpoDetailSchedule_description__0alFE\">40,962 건</dd></div"
-   ]
-  }
- }
+ ]
 }
