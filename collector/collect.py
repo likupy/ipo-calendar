@@ -937,6 +937,10 @@ def naver_listings(need, pxn=()):
             try:
                 t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
                 nm = re.search(r"<title>\s*([^<]*?)\s*-\s*Npay", t)
+                if nm:
+                    fv = naver_final(t)
+                    if fv:
+                        fin[norm(nm.group(1))] = fv
                 m = re.search(r"IpoDetailSchedule_text[^>]*>\s*상장\s*</span><span[^>]*>\s*(20\d{2})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", t)
                 if nm and m and norm(nm.group(1)) in need:
                     out[norm(nm.group(1))] = f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
