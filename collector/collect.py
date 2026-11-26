@@ -1237,17 +1237,20 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    for c, nm in (("A0231Y0", "신영스팩12호"), ("A0175C0", "유캐스트"), ("A498150", "엠비디"), ("A0147B0", "래블업")):
+    for nm, ua in (("mob", NV_UA), ("pc", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36")):
+        u = "https://ustock.naver.com/service/ipo?schedule=toBeIPOList"
         try:
-            t = get("https://stock.naver.com/ipo/" + c, ua=NV_UA)
-            info = re.findall(r'IpoDetailInfo_term[^>]*>([^<]+)</dt><dd[^>]*>(.*?)</dd>', t)
-            res = []
-            for m in re.finditer(r'IpoDetailSchedule_name[^>]*>\s*([^<]+?)\s*</span>', t):
-                res.append(re.sub(r"<[^>]+>", " ", re.sub(r"\s+", " ", t[m.end():m.end() + 1400]))[:400])
-            tot = re.findall(r"통합 경쟁률[^<]*", t)[:2]
-            out[nm] = {"info": [(k, re.sub(r"<[^>]+>", "", v)) for k, v in info], "res": res, "tot": tot}
+            t = get(u, ua=ua)
+            o = {"len": len(t), "title": (re.search(r"<title>([^<]*)", t) or [0, ""])[1]}
+            o["uc"] = "유캐스트" in t
+            o["균등"] = [re.sub(r"\s+", " ", t[max(0, m.start() - 200):m.start() + 300]) for m in re.finditer(r"균등", t)][:4]
+            o["scripts"] = re.findall(r'src="([^"]+\.js)"', t)[:12]
+            o["hrefs"] = sorted(set(re.findall(r'href="([^"]*ipo[^"]*)"', t)))[:20]
+            o["codes"] = sorted(set(re.findall(r"\b[A-Z0-9]{7}\b", t)))[:20]
+            o["head"] = re.sub(r"\s+", " ", t[:600])
+            out[nm] = o
         except Exception as ex:
-            out[nm] = str(ex)[:100]
+            out[nm] = str(ex)[:200]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
