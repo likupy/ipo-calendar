@@ -1013,7 +1013,7 @@ def derive_alloc(merged):
     for it_ in merged.values():   # 청약이 끝나 실적보고서가 나왔으면, 증권사별 배정 수량은 보고서의 실제 배정(균등+비례)을 쓴다
         e_ = it_.get("ext") or {}
         f_, fb_ = e_.get("fin") or {}, e_.get("fin_b")
-        if not f_.get("got"):
+        if not f_.get("got") or e_.get("alloc"):   # 이미 확정 배정 물량이 있으면(미달로 실제 배정이 달랐어도) 그대로 둔다
             continue
         al_ = None
         if fb_ and len(fb_) == len(it_.get("brokers") or []):
