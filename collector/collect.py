@@ -1242,23 +1242,15 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    try:
-        t = get("https://ustock.naver.com/service/ipo?schedule=toBeIPOList", ua=NV_UA)
-        rows = []
-        for m in re.finditer(r"<table[^>]*>.*?</table>", t, re.S):
-            tb = m.group(0)
-            if "균등배정수" not in tb:
-                continue
-            body = re.findall(r"<tr>(.*?)</tr>", tb, re.S)
-            cells = [re.findall(r"<td[^>]*>(.*?)</td>", r, re.S) for r in body]
-            pre = re.sub(r"<[^>]+>", " ", t[max(0, m.start() - 2500):m.start()])
-            pre = re.sub(r"\s+", " ", pre)[-330:]
-            rows.append([pre, cells])
-        out["n"] = len(rows)
-        out["rows"] = rows
-        out["names"] = re.findall(r'<(?:strong|h\d|span)[^>]*>([가-힣A-Za-z0-9]{2,14}(?:스팩\d+호)?)</', t)[:60]
-    except Exception as ex:
-        out["err"] = str(ex)[:200]
+    for k, rc in (("신고서", "20261123000371"), ("설명서", "20261123000373")):
+        try:
+            t = fetch_doc_text(rc)
+            o = {"len": len(t)}
+            o["1562500"] = [t[max(0, m.start() - 500):m.start() + 500] for m in re.finditer(r"1,562,500", t)][:3]
+            o["일반청약자"] = [t[max(0, m.start() - 200):m.start() + 400] for m in re.finditer(r"일반청약자", t)][:4]
+            out[k] = o
+        except Exception as ex:
+            out[k] = str(ex)[:200]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
