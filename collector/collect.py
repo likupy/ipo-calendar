@@ -394,13 +394,22 @@ MINQ_VER = 3   # 최소수량 읽는 규칙을 고칠 때 올린다 -> 이미 �
 SPAC_ALIAS = [("에스케이", "SK"), ("엔에이치", "NH"), ("케이비", "KB"), ("아이비케이", "IBK"), ("디비", "DB"), ("한국투자", "한국")]
 
 
+def spac_core(k):
+    """스팩 이름 표기 차이를 없애는 공통 규칙(38↔DART 이름 맞춤과 영상 제목 맞춤이 같이 씀):
+    에스케이=SK 같은 한글 표기 통일, '제'·'스팩'·'기업인수목적(회사)' 제거, '증권' 표기 유무 무시. 호수는 남긴다."""
+    for a, b in SPAC_ALIAS:
+        k = k.replace(a, b)
+    k = re.sub(r"제(?=\d)", "", k)
+    k = re.sub(r"기업인수목적(?:회사)?|스팩", "", k)
+    return re.sub(r"투자증권|증권", "", k)
+
+
 def norm2(n):
     """38 과 DART 의 회사 이름 표기 차이를 줄인 비교용 키. 스팩은 '한화플러스스팩6호' = '한화플러스제6호스팩'."""
     k = norm(n)
     if "스팩" in k or "기업인수목적" in k:
-        for a, b in SPAC_ALIAS:
-            k = k.replace(a, b)
-        k = re.sub(r"기업인수목적|스팩|제|호", "", k)
+        k = spac_core(k)
+        k = k.replace("호", "")
     return k
 
 
@@ -786,13 +795,8 @@ def yt_key(s):
 
 
 def spac_key(s):
-    """스팩 이름의 표기 차이를 없앤 키: '한화플러스스팩6호' = '한화플러스 6호 스팩' = '한화플러스제6호기업인수목적' -> '한화플러스6호'."""
-    k = yt_key(s)
-    for a, b in SPAC_ALIAS:
-        k = k.replace(a, b)
-    k = re.sub(r"제(?=\d)", "", k)
-    k = re.sub(r"기업인수목적(?:회사)?|스팩", "", k)
-    return re.sub(r"투자증권|증권", "", k)   # 'SK스팩14호' = 'SK증권스팩14호'(증권 표기 유무는 같은 종목)
+    """영상 제목·종목 이름 비교용: 38↔DART 와 같은 규칙(spac_core). '한화플러스스팩6호' = '한화플러스 6호 스팩' = '한화플러스제6호기업인수목적' -> '한화플러스6호'."""
+    return spac_core(yt_key(s))
 
 
 def yt_match(name, keys, title):
