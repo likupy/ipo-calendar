@@ -613,7 +613,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     $('monthLabel').textContent = y + '년 ' + m + '월';
     document.querySelectorAll('[data-cat]').forEach(b => b.setAttribute('aria-pressed', String(state.visible[b.getAttribute('data-cat')])));
     $('stamp').textContent = DATA.live
-      ? '38·DART 기준 ' + Number(DATA.updatedAt.slice(5, 7)) + '/' + Number(DATA.updatedAt.slice(8, 10)) + (DATA.updatedAt.length > 10 ? ' ' + DATA.updatedAt.slice(11, 16) : '')
+      ? '38·DART 확인 ' + (t => Number(t.slice(5, 7)) + '/' + Number(t.slice(8, 10)) + (t.length > 10 ? ' ' + t.slice(11, 16) : ''))(DATA.checkedAt || DATA.updatedAt)
       : '기준 ' + Number(DATA.updatedAt.slice(5, 7)) + '/' + Number(DATA.updatedAt.slice(8)) + ' · 샘플 데이터';
 
     $('stamp2').textContent = $('stamp').textContent;
@@ -1083,6 +1083,13 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
         const h = homeMonth();
         if (!state.touched) { state.y = h.y; state.m = h.m; }
         render();
+        /* last time the collector ran (it only rewrites ipo.json when data changed) */
+        return fetch('data/checked.json?t=' + Date.now(), { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .then(c => {
+            if (c && typeof c.checkedAt === 'string' && c.checkedAt >= DATA.updatedAt) { DATA.checkedAt = c.checkedAt; render(); }
+          })
+          .catch(() => {});
       })
       .catch(() => {});
   }
