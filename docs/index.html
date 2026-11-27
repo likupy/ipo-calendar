@@ -625,7 +625,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     $('monthLabel').textContent = y + '년 ' + m + '월';
     document.querySelectorAll('[data-cat]').forEach(b => b.setAttribute('aria-pressed', String(state.visible[b.getAttribute('data-cat')])));
     $('stamp').textContent = DATA.live
-      ? '38·DART 확인 ' + (t => Number(t.slice(5, 7)) + '/' + Number(t.slice(8, 10)) + (t.length > 10 ? ' ' + t.slice(11, 16) : ''))(DATA.checkedAt || DATA.updatedAt)
+      ? '38·DART 기준 ' + (t => Number(t.slice(5, 7)) + '/' + Number(t.slice(8, 10)) + (t.length > 10 ? ' ' + t.slice(11, 16) : ''))(DATA.checkedAt || DATA.updatedAt)
       : '기준 ' + Number(DATA.updatedAt.slice(5, 7)) + '/' + Number(DATA.updatedAt.slice(8)) + ' · 샘플 데이터';
 
     $('stamp2').textContent = $('stamp').textContent;
