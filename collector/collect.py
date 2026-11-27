@@ -791,7 +791,8 @@ def spac_key(s):
     for a, b in SPAC_ALIAS:
         k = k.replace(a, b)
     k = re.sub(r"제(?=\d)", "", k)
-    return re.sub(r"기업인수목적(?:회사)?|스팩", "", k)
+    k = re.sub(r"기업인수목적(?:회사)?|스팩", "", k)
+    return re.sub(r"투자증권|증권", "", k)   # 'SK스팩14호' = 'SK증권스팩14호'(증권 표기 유무는 같은 종목)
 
 
 def yt_match(name, keys, title):
@@ -813,7 +814,7 @@ def enrich(merged, old, alias):
             continue
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
-        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or oe["fin"].get("rv") == 2) and (not is_spac(it["name"]) or (oe.get("corp_v") == 2 and oe.get("yt_v") == 1)):
+        if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or oe["fin"].get("rv") == 2) and (not is_spac(it["name"]) or (oe.get("corp_v") == 2 and oe.get("yt_v") == 2)):
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -915,7 +916,7 @@ def enrich(merged, old, alias):
         except Exception as ex:
             log("  YouTube 실패", ex)
         e["v"] = EXT_VER
-        e["yt_v"] = 1   # 스팩 영상 매칭 규칙(증권사+호수) 적용 버전
+        e["yt_v"] = 2   # 스팩 영상 매칭 규칙(증권사+호수) 적용 버전
         it["ext"] = e
 
 
