@@ -1355,16 +1355,22 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    for nm, rc in (("하나에어로", "20261109000166"), ("브릴스", "20260916000240"), ("아이엠스팩1호", "20261022000376"), ("우리투자스팩1호", "20261117000002")):
-        try:
-            t = fetch_doc_text(rc)
-            secs = broker_sections(t)
-            o = {}
-            for bk, sec in secs.items():
-                o[bk] = [re.sub(r"\s+", " ", sec[max(0, m.start() - 160):m.start() + 200]) for m in re.finditer(r"전일|직전", sec)][:3]
-            out[nm] = o
-        except Exception as ex:
-            out[nm] = str(ex)[:150]
+    names = ("엔키화이트햇", "유캐스트", "엠비디", "하나에어로다이내믹스", "영광", "브릴스", "범한메카텍", "마더스제약", "신영스팩12호", "한화플러스스팩6호", "네오사피엔스", "이노보테라퓨틱스")
+    for p in doc["ipos"]:
+        if p["name"] not in names:
+            continue
+        d = (p.get("ext") or {}).get("dart") or {}
+        o = {}
+        for k in ("설명서", "신고서"):
+            if not d.get(k):
+                continue
+            try:
+                t = fetch_doc_text(d[k])
+                ms = [m.start() for m in re.finditer(r"환매\s*청구권", t)]
+                o[k] = {"n": len(ms), "ctx": [t[max(0, a - 120):a + 330] for a in ms[:3]] + ([t[max(0, ms[-1] - 120):ms[-1] + 330]] if len(ms) > 3 else [])}
+            except Exception as ex:
+                o[k] = str(ex)[:120]
+        out[p["name"]] = o
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
