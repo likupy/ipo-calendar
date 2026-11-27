@@ -785,6 +785,25 @@ def yt_key(s):
     return re.sub(r"[\s\[\]()\-_·,.!?'\"~]", "", s or "")
 
 
+def spac_key(s):
+    """스팩 이름의 표기 차이를 없앤 키: '한화플러스스팩6호' = '한화플러스 6호 스팩' = '한화플러스제6호기업인수목적' -> '한화플러스6호'."""
+    k = yt_key(s)
+    for a, b in SPAC_ALIAS:
+        k = k.replace(a, b)
+    k = re.sub(r"제(?=\d)", "", k)
+    return re.sub(r"기업인수목적(?:회사)?|스팩", "", k)
+
+
+def yt_match(name, keys, title):
+    tk = yt_key(title)
+    if any(k and k in tk for k in keys):
+        return True
+    if is_spac(name) and is_spac(title):   # 증권사 이름 + 00호 + 스팩(또는 기업인수목적) 이 같으면 같은 종목
+        nk = spac_key(name)
+        return bool(re.search(r"\d+호$", nk)) and nk in spac_key(title)
+    return False
+
+
 def enrich(merged, old, alias):
     vids = None
     today = datetime.now(KST).date()
@@ -879,7 +898,7 @@ def enrich(merged, old, alias):
                 vids = yt_videos()
                 log(f"  YouTube 영상 {len(vids)}개 읽음")
             keys = [yt_key(it["name"])] + [yt_key(a) for a in alias.get(iid, [])]
-            cand = {v["id"]: v for v in vids if v.get("id") and any(k and k in yt_key(v["t"]) for k in keys)}
+            cand = {v["id"]: v for v in vids if v.get("id") and yt_match(it["name"], keys, v["t"])}
             apikey = os.environ.get("YT_API_KEY", "").strip()
             # API 키가 없을 때만 예전에 '라이브 아님'으로 확인한 영상을 그대로 둔다. 키가 있으면 매번 다시 확인한다.
             keep = {} if apikey else {v["id"]: v for v in e.get("yt", []) if v.get("lv") is False}
