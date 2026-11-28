@@ -570,6 +570,59 @@ def parse_ext38(t, brokers):
     return e
 
 
+PUT_TB = re.compile(r"일반청약자\s*환매청구권\s*부여사유\s*행사가능\s*투자자\s*부여수량\s*행사기간\s*행사가격\s*(.{0,200}?)\s*【")
+PUT_NEG = re.compile(r"환매청구권(?:이|을)?\s*부여(?:되지|하지)\s*(?:않|아니)|환매청구권\)\s*제1항\s*각\s*호에\s*해당하는\s*사항이\s*존재하지\s*않")
+
+
+def parse_put(t):
+    """증권신고서·투자설명서의 환매청구권. 있으면 {'y':1,'mo':개월,'pct':행사가격 비율}, 없다고 밝혔으면 {}, 문서에서 못 읽으면 None."""
+    m = PUT_TB.search(t)
+    if m:
+        row = m.group(1).strip()
+        if re.fullmatch(r"[-\s]*", row):
+            return {}
+        r = {"y": 1}
+        mm = re.search(r"일반청약자\s+[\d,]+\s+상장일[^\d]{0,12}(\d+)\s*개월", row)
+        if mm:
+            r["mo"] = int(mm.group(1))
+        pc = re.search(r"권리\s*행사\s*가격은?\s*공모\s*가(?:격|액)?의\s*(\d+)\s*%", t)
+        if pc and 50 <= int(pc.group(1)) <= 100:
+            r["pct"] = int(pc.group(1))
+        return r
+    if PUT_NEG.search(t):
+        return {}
+    if re.search(r"일반청약자에게[^.]{0,80}?환매청구권을\s*부여하며", t):
+        r = {"y": 1}
+        mm = re.search(r"상장일(?:로)?부터\s*(\d+)\s*개월", t)
+        if mm:
+            r["mo"] = int(mm.group(1))
+        pc = re.search(r"권리\s*행사\s*가격은?\s*공모\s*가(?:격|액)?의\s*(\d+)\s*%", t)
+        if pc and 50 <= int(pc.group(1)) <= 100:
+            r["pct"] = int(pc.group(1))
+        return r
+    return None
+
+
+def read_put(e, reps):
+    """투자설명서(없으면 증권신고서)에서 환매청구권을 읽어 e['put'] 에 넣는다. 못 읽으면 넣지 않는다(=화면에 안 보임)."""
+    for k in ("설명서", "신고서"):
+        if not reps.get(k):
+            continue
+        try:
+            r = parse_put(fetch_doc_text(reps[k]))
+        except Exception as ex:
+            log("  환매청구권 읽기 실패", k, ex)
+            continue
+        if r is None:
+            continue
+        if r:
+            e["put"] = r
+        else:
+            e.pop("put", None)
+        return
+    e.pop("put", None)
+
+
 def parse_gen_doc(t):
     """증권신고서·투자설명서의 '정정 후' 청약대상자 유형별 표에서 확정된 일반청약자 배정 주식수(범위가 아닌 숫자 하나, '확정공모가액' 기준 문구가 뒤따르는 것)."""
     got = None
@@ -819,6 +872,11 @@ def enrich(merged, old, alias):
         oe = (old.get(iid) or {}).get("ext") or {}
         done = it.get("listing") and it["listing"] < (today - timedelta(days=3)).isoformat()
         if oe.get("v") == EXT_VER and done and (oe.get("inst") or not oe.get("comp") or oe.get("inst_tried")) and (not oe.get("fin") or oe["fin"].get("rv") == 2) and (not is_spac(it["name"]) or (oe.get("corp_v") == 2 and oe.get("yt_v") == 2)):
+            if oe.get("put_v") != 1 and oe.get("dart"):   # 환매청구권은 이 종목들도 한 번만 따로 읽는다
+                oe = dict(oe)
+                read_put(oe, oe["dart"])
+                oe["put_v"] = 1
+                oe["put_rc"] = "/".join(oe["dart"].get(k, "") for k in ("설명서", "신고서"))
             it["ext"] = oe   # 상장한 지 며칠 지난 종목은 읽는 방식이 바뀔 때까지 다시 읽지 않는다
             continue
         e = dict((old.get(iid) or {}).get("ext", {}))
@@ -848,6 +906,10 @@ def enrich(merged, old, alias):
                 if reps:
                     e["dart"] = reps
                 rc_ = "/".join(reps.get(k, "") for k in ("설명서", "신고서"))
+                if rc_ and e.get("put_rc") != rc_:   # 새 공시(정정 포함)가 나오면 환매청구권을 다시 읽는다
+                    read_put(e, reps)
+                    e["put_rc"] = rc_
+                    e["put_v"] = 1
                 if e.get("alloc_r") and rc_ and e.get("gen_rc") != rc_:   # 38 이 아직 범위로만 적은 종목: 공시의 '정정 후' 표에 확정 배정이 있으면 읽는다
                     try:
                         for k_ in ("설명서", "신고서"):
