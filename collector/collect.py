@@ -1418,20 +1418,14 @@ def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
     for p in doc["ipos"]:
-        if p["name"] not in ("바로팜", "빅웨이브로보틱스", "범한메카텍"):
+        if p["name"] != "유캐스트":
             continue
-        d = (p.get("ext") or {}).get("dart") or {}
-        o = {}
-        for k in ("설명서", "신고서"):
-            if not d.get(k):
-                continue
-            try:
-                t = fetch_doc_text(d[k])
-                m = PUT_TB.search(t)
-                o[k] = {"row": m.group(1) if m else None, "pct": [t[max(0, x.start() - 100):x.end() + 40] for x in re.finditer(r"권리\s*행사\s*가격", t)][:2]}
-            except Exception as ex:
-                o[k] = str(ex)[:120]
-        out[p["name"]] = o
+        t = text_of(get(DETAIL.format(p["id"][1:])))
+        out["38"] = [t[max(0, m.start() - 200):m.start() + 500] for m in re.finditer(r"유통가능", t)][:4]
+        rc = ((p.get("ext") or {}).get("dart") or {}).get("실적")
+        if rc:
+            r = fetch_doc_text(rc)
+            out["rep"] = [r[max(0, m.start() - 300):m.start() + 500] for m in re.finditer(r"미확약", r)][:2]
     doc["probe"] = out
     json.dump(doc, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
 
