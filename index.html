@@ -732,7 +732,7 @@ html.mob .dow span { color: var(--ink); font-weight: 700; }
     const preLk = hasDem && e.lock_pct != null;
     const preFl = preLk && calc && e.apply_qty && e.lock_qty != null ? (e.free - e.inst * e.lock_qty / e.apply_qty) * p.price : null;
     const lk1 = fin ? (f.inst - f.unlock) / f.inst * 100 : null;
-    const fl1 = fin && e.free && p.price != null ? (e.free - (f.inst - f.unlock)) * p.price : null;
+    const fl1 = fin && e.free && p.price != null ? (e.free - (f.inst - f.unlock) - (f.gen != null && f.got != null ? Math.max(0, f.gen - f.got) : 0)) * p.price : null;   /* 일반청약이 미달이면 청약 안 된 물량은 인수회사 몫이라 유통가능에서 뺀다 */
     let h = '<div class="sec"><h4>공모 지표</h4>';
     const dw = e.dem_dates ? '수요예측(' + md(e.dem_dates[0]) + '~' + md(e.dem_dates[1]) + ') 결과가 공시되면 표시돼요.' : '수요예측 결과가 공시되면 표시돼요.';
     h += '<div class="xcd"><div class="lb">기관 수요예측 경쟁률</div>' + (hasDem ? '<div class="bg">' + f2(e.comp) + '<small>: 1</small></div><div class="ex">기관 투자자 신청이 공모 물량의 약 ' + fmt(Math.round(e.comp)) + '배였어요.</div>' : '<div class="bg none">결과 대기</div><div class="ex">' + dw + '</div>') + '</div>';
