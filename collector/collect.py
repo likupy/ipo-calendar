@@ -1417,9 +1417,8 @@ def main():
 def probe():
     out = {}
     doc = json.load(open(OUT, encoding="utf-8"))
-    names = ("엔키화이트햇", "유캐스트", "엠비디", "하나에어로다이내믹스", "영광", "브릴스", "범한메카텍", "마더스제약", "신영스팩12호", "한화플러스스팩6호", "네오사피엔스", "이노보테라퓨틱스")
     for p in doc["ipos"]:
-        if p["name"] not in names:
+        if p["name"] not in ("바로팜", "빅웨이브로보틱스", "범한메카텍"):
             continue
         d = (p.get("ext") or {}).get("dart") or {}
         o = {}
@@ -1428,8 +1427,8 @@ def probe():
                 continue
             try:
                 t = fetch_doc_text(d[k])
-                ms = [m.start() for m in re.finditer(r"환매\s*청구권", t)]
-                o[k] = {"n": len(ms), "ctx": [t[max(0, a - 120):a + 330] for a in ms[:3]] + ([t[max(0, ms[-1] - 120):ms[-1] + 330]] if len(ms) > 3 else [])}
+                m = PUT_TB.search(t)
+                o[k] = {"row": m.group(1) if m else None, "pct": [t[max(0, x.start() - 100):x.end() + 40] for x in re.finditer(r"권리\s*행사\s*가격", t)][:2]}
             except Exception as ex:
                 o[k] = str(ex)[:120]
         out[p["name"]] = o
